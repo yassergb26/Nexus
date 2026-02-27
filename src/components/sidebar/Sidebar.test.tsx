@@ -9,75 +9,74 @@ describe('Sidebar', () => {
     useMapStore.setState({
       sidebarOpen: true,
       hudVisible: true,
+      cleanUI: false,
       activePreset: 'global',
       layers: useMapStore.getState().layers.map((l) => ({ ...l, enabled: false })),
     })
   })
 
-  it('renders LAYERS header when open', () => {
+  it('renders CCTV MESH panel header', () => {
     render(<Sidebar />)
-    expect(screen.getByText('LAYERS')).toBeInTheDocument()
+    expect(screen.getByText('CCTV MESH')).toBeInTheDocument()
   })
 
-  it('renders all 8 regional presets', () => {
+  it('renders DATA LAYERS panel header', () => {
     render(<Sidebar />)
-    expect(screen.getByText('Global')).toBeInTheDocument()
-    expect(screen.getByText('Americas')).toBeInTheDocument()
-    expect(screen.getByText('Europe')).toBeInTheDocument()
-    expect(screen.getByText('MENA')).toBeInTheDocument()
-    expect(screen.getByText('Asia')).toBeInTheDocument()
-    expect(screen.getByText('Africa')).toBeInTheDocument()
-    expect(screen.getByText('Oceania')).toBeInTheDocument()
-    expect(screen.getByText('Latin America')).toBeInTheDocument()
+    expect(screen.getByText('DATA LAYERS')).toBeInTheDocument()
   })
 
-  it('renders layer categories', () => {
+  it('renders SCENES panel header', () => {
     render(<Sidebar />)
-    expect(screen.getByText('Military & Strategic')).toBeInTheDocument()
-    expect(screen.getByText('Infrastructure')).toBeInTheDocument()
-    expect(screen.getByText('Conflicts & Unrest')).toBeInTheDocument()
-    expect(screen.getByText('Natural Events')).toBeInTheDocument()
-    expect(screen.getByText('Live Feeds')).toBeInTheDocument()
-    expect(screen.getByText('Financial')).toBeInTheDocument()
+    expect(screen.getByText('SCENES')).toBeInTheDocument()
   })
 
-  it('shows version footer', () => {
-    render(<Sidebar />)
-    expect(screen.getByText('NEXUS v0.1.0')).toBeInTheDocument()
+  it('renders nothing when cleanUI is true', () => {
+    useMapStore.setState({ cleanUI: true })
+    const { container } = render(<Sidebar />)
+    expect(container.innerHTML).toBe('')
   })
 
-  it('shows layer count', () => {
-    render(<Sidebar />)
-    expect(screen.getByText('25 layers available')).toBeInTheDocument()
-  })
-
-  it('shows HUD Overlay toggle', () => {
-    render(<Sidebar />)
-    expect(screen.getByText('HUD Overlay')).toBeInTheDocument()
-  })
-
-  it('clicking a preset updates active preset', async () => {
+  it('expands DATA LAYERS to show layer list', async () => {
     const user = userEvent.setup()
     render(<Sidebar />)
-    await user.click(screen.getByText('Europe'))
-    expect(useMapStore.getState().activePreset).toBe('europe')
+    // Click the DATA LAYERS header to expand it
+    await user.click(screen.getByText('DATA LAYERS'))
+    expect(screen.getByText('Live Flights')).toBeInTheDocument()
+    expect(screen.getByText('Earthquakes')).toBeInTheDocument()
+    expect(screen.getByText('Satellites')).toBeInTheDocument()
   })
 
-  it('shows collapsed state with open button', () => {
-    useMapStore.setState({ sidebarOpen: false })
+  it('shows ON/OFF toggles for layers when expanded', async () => {
+    const user = userEvent.setup()
     render(<Sidebar />)
-    expect(screen.queryByText('LAYERS')).not.toBeInTheDocument()
-    expect(screen.getByTitle('Open Sidebar')).toBeInTheDocument()
+    await user.click(screen.getByText('DATA LAYERS'))
+    // All layers start OFF
+    const offToggles = screen.getAllByText('OFF')
+    expect(offToggles.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('shows enabled count badge when layers are on', () => {
-    useMapStore.setState({
-      layers: useMapStore.getState().layers.map((l) =>
-        l.id === 'flights' ? { ...l, enabled: true } : l
-      ),
-    })
+  it('toggles a layer when ON/OFF is clicked', async () => {
+    const user = userEvent.setup()
     render(<Sidebar />)
-    // The badge shows "1"
-    expect(screen.getByText('1')).toBeInTheDocument()
+    await user.click(screen.getByText('DATA LAYERS'))
+    // Find the first OFF toggle and click it
+    const offToggles = screen.getAllByText('OFF')
+    await user.click(offToggles[0])
+    // Check that the CCTV layer (first in primary list) toggled — at least one ON should appear
+    expect(screen.getAllByText('ON').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows CCTV toggle inside CCTV MESH panel', async () => {
+    const user = userEvent.setup()
+    render(<Sidebar />)
+    await user.click(screen.getByText('CCTV MESH'))
+    expect(screen.getByText('Camera feeds')).toBeInTheDocument()
+  })
+
+  it('shows scenes placeholder when expanded', async () => {
+    const user = userEvent.setup()
+    render(<Sidebar />)
+    await user.click(screen.getByText('SCENES'))
+    expect(screen.getByText('No saved scenes')).toBeInTheDocument()
   })
 })

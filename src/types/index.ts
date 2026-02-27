@@ -74,3 +74,16 @@ export interface FlyToTarget {
   heading?: number
   pitch?: number
 }
+
+export interface Landmark {
+  id: string
+  name: string
+  city: string
+  lat: number
+  lon: number
+  icon?: string
+}
+
+export type LayoutMode = 'tactical' | 'clean' | 'cinematic'
+
+export type RenderQuality = 'ultra' | 'high' | 'medium' | 'low' | 'potato'

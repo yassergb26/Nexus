@@ -11,4 +11,5 @@ interface ImportMeta {
 }
 
 // Allow Cesium global access
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const Cesium: any

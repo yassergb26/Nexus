@@ -109,6 +109,7 @@ export function useSatellitesLayer() {
           outlineWidth: 2,
           scaleByDistance: new NearFarScalar(1e5, 2.5, 5e7, 0.6),
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         description: `<b>${name}</b><br/>Orbital Station` as unknown as any,
       })
     }
@@ -122,6 +123,7 @@ export function useSatellitesLayer() {
         const entity = source.entities.getById(`sat-${name}`)
         if (!entity) continue
         const pos = propagateToCartesian(satrec)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (pos) entity.position = pos as unknown as any
       }
     }, 5000)

@@ -155,7 +155,8 @@ export function CommandPalette() {
       .slice(0, 12)
   }, [allItems, query])
 
-  // Reset selection whenever results change
+  // Reset selection whenever query changes
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setIdx(0), [query])
 
   // Global Cmd+K toggle

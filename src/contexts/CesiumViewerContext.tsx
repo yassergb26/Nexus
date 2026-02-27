@@ -26,16 +26,19 @@ export function CesiumViewerProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCesiumViewerContext() {
   const ctx = useContext(CesiumViewerContext)
   if (!ctx) throw new Error('Must be inside CesiumViewerProvider')
   return ctx
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCesiumViewer(): Viewer | null {
   return useCesiumViewerContext().viewerRef.current
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCesiumViewerRef(): MutableRefObject<Viewer | null> {
   return useCesiumViewerContext().viewerRef
 }

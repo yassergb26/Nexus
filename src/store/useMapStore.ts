@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { MapPosition, VisualMode, MapLayer, RegionalPreset, TimeRange, FlyToTarget } from '../types'
+import type { MapPosition, VisualMode, MapLayer, RegionalPreset, TimeRange, FlyToTarget, LayoutMode, RenderQuality } from '../types'
 import { REGIONAL_PRESETS } from '../utils/presets'
 import { DEFAULT_LAYERS } from '../utils/layers'
 
@@ -14,6 +14,15 @@ interface MapState {
   selectedEntityId: string | null
   timeRange: TimeRange
   pendingFlyTo: FlyToTarget | null
+  performanceMode: boolean
+  sharpenAmount: number
+  bloomEnabled: boolean
+  cleanUI: boolean
+  activeCity: string | null
+  activeLandmark: string | null
+  layoutMode: LayoutMode
+  devMode: boolean
+  renderQuality: RenderQuality
 
   setPosition: (position: Partial<MapPosition>) => void
   setVisualMode: (mode: VisualMode) => void
@@ -27,6 +36,15 @@ interface MapState {
   getActivePreset: () => RegionalPreset | undefined
   setTimeRange: (range: TimeRange) => void
   setPendingFlyTo: (target: FlyToTarget | null) => void
+  togglePerformanceMode: () => void
+  setSharpen: (amount: number) => void
+  toggleBloom: () => void
+  toggleCleanUI: () => void
+  setActiveCity: (city: string | null) => void
+  setActiveLandmark: (id: string | null) => void
+  setLayoutMode: (mode: LayoutMode) => void
+  toggleDevMode: () => void
+  setRenderQuality: (quality: RenderQuality) => void
 }
 
 export const useMapStore = create<MapState>((set, get) => ({
@@ -80,6 +98,24 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   timeRange: '24h',
   pendingFlyTo: null,
+  performanceMode: false,
+  sharpenAmount: 49,
+  bloomEnabled: false,
+  cleanUI: false,
+  activeCity: null,
+  activeLandmark: null,
+  layoutMode: 'tactical',
+  devMode: false,
+  renderQuality: 'high',
   setTimeRange: (range) => set({ timeRange: range }),
   setPendingFlyTo: (target) => set({ pendingFlyTo: target }),
+  togglePerformanceMode: () => set((state) => ({ performanceMode: !state.performanceMode })),
+  setSharpen: (amount) => set({ sharpenAmount: amount }),
+  toggleBloom: () => set((state) => ({ bloomEnabled: !state.bloomEnabled })),
+  toggleCleanUI: () => set((state) => ({ cleanUI: !state.cleanUI })),
+  setActiveCity: (city) => set({ activeCity: city, activeLandmark: null }),
+  setActiveLandmark: (id) => set({ activeLandmark: id }),
+  setLayoutMode: (mode) => set({ layoutMode: mode }),
+  toggleDevMode: () => set((state) => ({ devMode: !state.devMode })),
+  setRenderQuality: (quality) => set({ renderQuality: quality }),
 }))

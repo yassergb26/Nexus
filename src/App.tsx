@@ -2,6 +2,9 @@ import { useEffect } from 'react'
 import GlobeViewer from './components/globe/GlobeViewer'
 import HudOverlay from './components/hud/HudOverlay'
 import Sidebar from './components/sidebar/Sidebar'
+import RightPanel from './components/controls/RightPanel'
+import StylePresetsBar from './components/controls/StylePresetsBar'
+import LocationsBar from './components/controls/LocationsBar'
 import LayerRenderer from './components/globe/LayerRenderer'
 import { CommandPalette } from './components/CommandPalette'
 import { CesiumViewerProvider } from './contexts/CesiumViewerContext'
@@ -60,6 +63,23 @@ export default function App() {
         <GlobeViewer />
         <LayerRenderer />
 
+        {/* ── Topographic contour pattern in the dark border area ───────────
+            Subtle organic contour lines visible in the masked-out corners,
+            matching the WorldView ISR aesthetic background.                  */}
+        <svg className="absolute inset-0 z-[9] pointer-events-none w-full h-full opacity-[0.035]">
+          <defs>
+            <pattern id="topo" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
+              <ellipse cx="60" cy="60" rx="55" ry="40" fill="none" stroke="#00d4aa" strokeWidth="0.5" />
+              <ellipse cx="60" cy="60" rx="42" ry="28" fill="none" stroke="#00d4aa" strokeWidth="0.5" />
+              <ellipse cx="60" cy="60" rx="28" ry="18" fill="none" stroke="#00d4aa" strokeWidth="0.5" />
+              <ellipse cx="60" cy="60" rx="14" ry="9" fill="none" stroke="#00d4aa" strokeWidth="0.5" />
+              <ellipse cx="25" cy="110" rx="30" ry="22" fill="none" stroke="#00d4aa" strokeWidth="0.3" />
+              <ellipse cx="100" cy="15" rx="25" ry="18" fill="none" stroke="#00d4aa" strokeWidth="0.3" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#topo)" />
+        </svg>
+
         {/* ── Circular viewport mask ─────────────────────────────────────────
             Dark overlay with a circular hole that reveals the globe through
             the center — matching the WorldView ISR/IMINT window aesthetic.
@@ -86,8 +106,16 @@ export default function App() {
           }}
         />
 
+        {/* ── Overlays ──────────────────────────────────────────────────────
+            z-20: HUD edge text
+            z-30: Left panels, right panel, bottom bars
+            z-40: HUD top/bottom blocks
+            z-101: CommandPalette                                             */}
         <HudOverlay />
         <Sidebar />
+        <RightPanel />
+        <LocationsBar />
+        <StylePresetsBar />
         <CommandPalette />
       </div>
     </CesiumViewerProvider>

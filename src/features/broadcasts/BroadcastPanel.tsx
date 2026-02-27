@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Radio, ChevronDown, ChevronUp } from 'lucide-react'
+import { Radio, ChevronDown, ChevronUp } from 'lucide-react'
 import { useMapStore } from '../../store/useMapStore'
 import { BROADCAST_STREAMS } from '../../data/broadcast-streams'
 

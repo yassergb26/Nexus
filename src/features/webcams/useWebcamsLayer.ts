@@ -58,6 +58,7 @@ export function useWebcamsLayer() {
           outlineWidth: 3,
           scaleByDistance: new NearFarScalar(1e4, 2.0, 1e7, 0.5),
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         description: cam.description as unknown as any,
       })
     }

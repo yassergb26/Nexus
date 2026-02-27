@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CustomDataSource, Cartesian3, Color, NearFarScalar, HeadingPitchRoll, Math as CesiumMath } from 'cesium'
+import { CustomDataSource, Cartesian3, Color, NearFarScalar, HeadingPitchRoll } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
 import { fetchFlights } from '../../services/opensky'
@@ -60,14 +60,10 @@ export function useFlightsLayer() {
           outlineWidth: 2,
           scaleByDistance: new NearFarScalar(1e5, 2.0, 1e7, 0.4),
         },
-        description: `
-          <b>${flight.callsign || flight.icao24}</b><br/>
-          Origin: ${flight.originCountry}<br/>
-          Altitude: ${(alt / 1000).toFixed(1)} km<br/>
-          Speed: ${flight.velocity.toFixed(0)} m/s<br/>
-          Heading: ${flight.heading.toFixed(0)}°
-        ` as unknown as any,
-        orientation: HeadingPitchRoll.fromDegrees(flight.heading, 0, 0) as unknown as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        description: `<b>${flight.callsign || flight.icao24}</b><br/>Origin: ${flight.originCountry}<br/>Altitude: ${(alt / 1000).toFixed(1)} km<br/>Speed: ${flight.velocity.toFixed(0)} m/s<br/>Heading: ${flight.heading.toFixed(0)}°` as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        orientation: HeadingPitchRoll.fromDegrees(flight.heading, 0, 0) as any,
       })
     }
     setLayerCount('flights', flights.length)

@@ -74,12 +74,8 @@ export function useEarthquakesLayer() {
           outlineWidth: 1,
           scaleByDistance: new NearFarScalar(1e5, 1.5, 2e7, 0.5),
         },
-        description: `
-          <b>${eq.properties.title}</b><br/>
-          Magnitude: ${mag}<br/>
-          Depth: ${eq.geometry.coordinates[2].toFixed(1)} km<br/>
-          ${new Date(eq.properties.time).toUTCString()}
-        ` as unknown as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        description: `<b>${eq.properties.title}</b><br/>Magnitude: ${mag}<br/>Depth: ${eq.geometry.coordinates[2].toFixed(1)} km<br/>${new Date(eq.properties.time).toUTCString()}` as any,
       })
     }
     setLayerCount('earthquakes', data.length)

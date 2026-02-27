@@ -18,7 +18,7 @@ export function useVisualMode() {
       try {
         viewer.scene.postProcessStages.remove(stageRef.current)
         stageRef.current.destroy()
-      } catch (_) { /* ignore if already destroyed */ }
+      } catch { /* ignore if already destroyed */ }
       stageRef.current = null
     }
 
@@ -42,7 +42,7 @@ export function useVisualMode() {
             viewer.scene.postProcessStages.remove(stageRef.current)
           }
           stageRef.current.destroy()
-        } catch (_) { /* ignore */ }
+        } catch { /* ignore */ }
         stageRef.current = null
       }
     }
