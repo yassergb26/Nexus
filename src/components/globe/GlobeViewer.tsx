@@ -12,6 +12,7 @@ import {
   defined,
   Ion,
   JulianDate,
+  DirectionalLight,
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { useMapStore } from '../../store/useMapStore'
@@ -34,74 +35,94 @@ interface QualitySettings {
   fog: boolean
   hdr: boolean
   tileMemoryMB: number
-  requestRenderMode: boolean // true = only re-render on camera move
+  tileOverflowMB: number     // extra cache before eviction kicks in
+  requestRenderMode: boolean  // true = only re-render on camera move
   dynamicSSE: boolean
+  preloadFlyTo: boolean       // pre-fetch tiles at camera fly destination
+  foveatedConeSize: number    // center-screen cone (0 = none, 0.3 = default)
+  progressiveHeight: number   // show low-res placeholders while loading (0–1)
 }
 
 const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
   ultra: {
     resolutionScale: 1.0,
-    sse: 4,
+    sse: 2,
     msaa: 4,
     ao: true,
     fxaa: true,
     fog: true,
     hdr: true,
     tileMemoryMB: 2048,
-
+    tileOverflowMB: 1024,
     requestRenderMode: false,
     dynamicSSE: true,
+    preloadFlyTo: true,
+    foveatedConeSize: 0.1,
+    progressiveHeight: 0.3,
   },
   high: {
     resolutionScale: 1.0,
-    sse: 8,
+    sse: 6,
     msaa: 4,
     ao: true,
     fxaa: true,
     fog: true,
     hdr: true,
     tileMemoryMB: 1024,
-
+    tileOverflowMB: 512,
     requestRenderMode: false,
     dynamicSSE: true,
+    preloadFlyTo: true,
+    foveatedConeSize: 0.2,
+    progressiveHeight: 0.4,
   },
   medium: {
     resolutionScale: 0.85,
-    sse: 16,
+    sse: 12,
     msaa: 2,
     ao: false,
     fxaa: true,
     fog: false,
     hdr: true,
     tileMemoryMB: 512,
-
+    tileOverflowMB: 256,
     requestRenderMode: true,
     dynamicSSE: true,
+    preloadFlyTo: false,
+    foveatedConeSize: 0.3,
+    progressiveHeight: 0.5,
   },
   low: {
     resolutionScale: 0.65,
-    sse: 32,
+    sse: 24,
     msaa: 1,
     ao: false,
     fxaa: false,
     fog: false,
     hdr: false,
     tileMemoryMB: 256,
-
+    tileOverflowMB: 128,
     requestRenderMode: true,
     dynamicSSE: false,
+    preloadFlyTo: false,
+    foveatedConeSize: 0.4,
+    progressiveHeight: 0.5,
   },
   potato: {
     resolutionScale: 0.5,
-    sse: 64,
+    sse: 48,
     msaa: 1,
     ao: false,
     fxaa: false,
     fog: false,
     hdr: false,
     tileMemoryMB: 128,
+    tileOverflowMB: 64,
     requestRenderMode: true,
     dynamicSSE: false,
+    preloadFlyTo: false,
+    foveatedConeSize: 0.5,
+    progressiveHeight: 0.5,
   },
 }
 
@@ -175,6 +196,10 @@ export default function GlobeViewer() {
     viewer.scene.highDynamicRange = q.hdr
     viewer.resolutionScale = q.resolutionScale
     viewer.shadows = false
+    viewer.scene.light = new DirectionalLight({
+      direction: new Cartesian3(0.35, -0.9, -0.28),
+      intensity: 1.8,
+    })
 
     viewer.scene.fog.enabled = q.fog
     if (q.fog) viewer.scene.fog.density = 0.0002
@@ -197,13 +222,40 @@ export default function GlobeViewer() {
     // ── Google Photorealistic 3D Tiles ───────────────────────────────────
     createGooglePhotorealistic3DTileset()
       .then((tileset) => {
+        // Core quality: lower SSE = sharper buildings, more tiles loaded
         tileset.maximumScreenSpaceError = q.sse
+
+        // Level-of-detail skipping: jump to desired LOD faster
         tileset.skipLevelOfDetail = true
+        tileset.baseScreenSpaceError = 1024
+        tileset.skipScreenSpaceErrorFactor = 16
+        tileset.skipLevels = 1
+        tileset.immediatelyLoadDesiredLevelOfDetail = false
+
+        // Dynamic SSE: reduce quality for distant horizon tiles
         tileset.dynamicScreenSpaceError = q.dynamicSSE
+        tileset.dynamicScreenSpaceErrorDensity = 0.00278
+        tileset.dynamicScreenSpaceErrorFactor = 4.0
+        tileset.dynamicScreenSpaceErrorHeightFalloff = 0.25
+
+        // Foveated rendering: full quality in center, reduced at edges
+        tileset.foveatedScreenSpaceError = true
+        tileset.foveatedConeSize = q.foveatedConeSize
+        tileset.foveatedMinimumScreenSpaceErrorRelaxation = 0.0
+        tileset.foveatedTimeDelay = 0.2
+
+        // Loading strategy
+        tileset.preferLeaves = true
+        tileset.loadSiblings = true
+        tileset.preloadFlightDestinations = q.preloadFlyTo
+        tileset.progressiveResolutionHeightFraction = q.progressiveHeight
+
+        // Memory budget
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(tileset as any).cacheBytes = q.tileMemoryMB * 1024 * 1024
-        tileset.preloadFlightDestinations = false
-        tileset.preferLeaves = true
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(tileset as any).maximumCacheOverflowBytes = q.tileOverflowMB * 1024 * 1024
+
         viewer.scene.primitives.add(tileset)
         tilesetRef.current = tileset
       })
@@ -325,9 +377,14 @@ export default function GlobeViewer() {
     // Tileset tuning
     if (tilesetRef.current) {
       tilesetRef.current.maximumScreenSpaceError = q.sse
+      tilesetRef.current.dynamicScreenSpaceError = q.dynamicSSE
+      tilesetRef.current.foveatedConeSize = q.foveatedConeSize
+      tilesetRef.current.preloadFlightDestinations = q.preloadFlyTo
+      tilesetRef.current.progressiveResolutionHeightFraction = q.progressiveHeight
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(tilesetRef.current as any).cacheBytes = q.tileMemoryMB * 1024 * 1024
-      tilesetRef.current.dynamicScreenSpaceError = q.dynamicSSE
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(tilesetRef.current as any).maximumCacheOverflowBytes = q.tileOverflowMB * 1024 * 1024
     }
   }, [performanceMode, renderQuality, viewerRef])
 

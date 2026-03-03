@@ -103,11 +103,11 @@ const LAYOUT_OPTIONS: { id: LayoutMode; label: string }[] = [
 ]
 
 const QUALITY_OPTIONS: { id: RenderQuality; label: string; desc: string; color: string }[] = [
-  { id: 'ultra',  label: 'ULTRA',  desc: 'Max quality · SSE 4 · 2GB tiles',   color: '#c084fc' },
-  { id: 'high',   label: 'HIGH',   desc: 'Default · SSE 8 · 1GB tiles',       color: '#00d4aa' },
-  { id: 'medium', label: 'MEDIUM', desc: 'Balanced · SSE 16 · render-on-move', color: '#fbbf24' },
-  { id: 'low',    label: 'LOW',    desc: 'Laptop · SSE 32 · no AO/fog',        color: '#f97316' },
-  { id: 'potato', label: 'POTATO', desc: 'Minimal · SSE 64 · lowest quality',   color: '#ef4444' },
+  { id: 'ultra',  label: 'ULTRA',  desc: 'Max quality · SSE 2 · 2GB tiles',    color: '#c084fc' },
+  { id: 'high',   label: 'HIGH',   desc: 'Default · SSE 6 · 1GB tiles',       color: '#00d4aa' },
+  { id: 'medium', label: 'MEDIUM', desc: 'Balanced · SSE 12 · render-on-move', color: '#fbbf24' },
+  { id: 'low',    label: 'LOW',    desc: 'Laptop · SSE 24 · no AO/fog',        color: '#f97316' },
+  { id: 'potato', label: 'POTATO', desc: 'Minimal · SSE 48 · lowest quality',   color: '#ef4444' },
 ]
 
 /** FLIR-specific parameters */
