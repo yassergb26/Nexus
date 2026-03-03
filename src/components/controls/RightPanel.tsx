@@ -11,7 +11,6 @@ import {
   Minus,
   Plus,
   Gauge,
-  Code,
   Zap,
 } from 'lucide-react'
 import { useMapStore } from '../../store/useMapStore'
@@ -108,7 +107,7 @@ const QUALITY_OPTIONS: { id: RenderQuality; label: string; desc: string; color: 
   { id: 'high',   label: 'HIGH',   desc: 'Default · SSE 8 · 1GB tiles',       color: '#00d4aa' },
   { id: 'medium', label: 'MEDIUM', desc: 'Balanced · SSE 16 · render-on-move', color: '#fbbf24' },
   { id: 'low',    label: 'LOW',    desc: 'Laptop · SSE 32 · no AO/fog',        color: '#f97316' },
-  { id: 'potato', label: 'POTATO', desc: 'No 3D tiles · flat globe only',      color: '#ef4444' },
+  { id: 'potato', label: 'POTATO', desc: 'Minimal · SSE 64 · lowest quality',   color: '#ef4444' },
 ]
 
 /** FLIR-specific parameters */
@@ -160,8 +159,6 @@ export default function RightPanel() {
     visualMode,
     layoutMode,
     setLayoutMode,
-    devMode,
-    toggleDevMode,
     renderQuality,
     setRenderQuality,
     fps,
@@ -328,15 +325,6 @@ export default function RightPanel() {
           )}
         </div>
 
-        {/* DEV MODE toggle */}
-        <ControlButton
-          icon={<Code size={13} />}
-          label="DEV MODE"
-          active={devMode}
-          onClick={toggleDevMode}
-          accent="#f59e0b"
-        />
-
         {/* FPS indicator */}
         <div className="flex items-center gap-2 px-3 py-1.5">
           <Zap size={11} className={fps < 30 ? 'text-[#ef4444]' : fps < 50 ? 'text-[#f59e0b]' : 'text-[#22c55e]'} />
@@ -349,17 +337,6 @@ export default function RightPanel() {
           </span>
         </div>
 
-        {/* Dev mode info banner */}
-        {devMode && (
-          <div className="px-3 py-2 bg-[#f59e0b]/8 border-t border-[#f59e0b]/20">
-            <div className="text-[8px] font-mono text-[#f59e0b] tracking-wider">
-              DEV MODE ACTIVE
-            </div>
-            <div className="text-[8px] font-mono text-[#f59e0b]/60 mt-0.5">
-              3D tiles disabled. Flat globe only. Toggle off for full quality.
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Mode-specific PARAMETERS panel */}

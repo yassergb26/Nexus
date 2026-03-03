@@ -34,7 +34,6 @@ interface QualitySettings {
   fog: boolean
   hdr: boolean
   tileMemoryMB: number
-  skip3DTiles: boolean       // true = flat globe only (dev/potato mode)
   requestRenderMode: boolean // true = only re-render on camera move
   dynamicSSE: boolean
 }
@@ -49,7 +48,7 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     fog: true,
     hdr: true,
     tileMemoryMB: 2048,
-    skip3DTiles: false,
+
     requestRenderMode: false,
     dynamicSSE: true,
   },
@@ -62,7 +61,7 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     fog: true,
     hdr: true,
     tileMemoryMB: 1024,
-    skip3DTiles: false,
+
     requestRenderMode: false,
     dynamicSSE: true,
   },
@@ -75,7 +74,7 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     fog: false,
     hdr: true,
     tileMemoryMB: 512,
-    skip3DTiles: false,
+
     requestRenderMode: true,
     dynamicSSE: true,
   },
@@ -88,7 +87,7 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     fog: false,
     hdr: false,
     tileMemoryMB: 256,
-    skip3DTiles: false,
+
     requestRenderMode: true,
     dynamicSSE: false,
   },
@@ -101,7 +100,6 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     fog: false,
     hdr: false,
     tileMemoryMB: 128,
-    skip3DTiles: true,
     requestRenderMode: true,
     dynamicSSE: false,
   },
@@ -115,7 +113,6 @@ export default function GlobeViewer() {
   const initialMount = useRef(true)
   const tilesetRef = useRef<Cesium3DTileset | null>(null)
   const aoRef = useRef<PostProcessStageComposite | null>(null)
-  const syncGlobeRef = useRef<(() => void) | null>(null)
 
   const {
     setPosition,
@@ -124,7 +121,6 @@ export default function GlobeViewer() {
     pendingFlyTo,
     setPendingFlyTo,
     performanceMode,
-    devMode,
     renderQuality,
   } = useMapStore()
 
@@ -152,6 +148,7 @@ export default function GlobeViewer() {
     const q = QUALITY_PRESETS[renderQuality]
 
     const viewer = new Viewer(containerRef.current, {
+      globe: false,
       timeline: false,
       animation: false,
       homeButton: false,
@@ -197,46 +194,22 @@ export default function GlobeViewer() {
     viewer.scene.postProcessStages.bloom.enabled = false
     viewer.scene.postProcessStages.fxaa.enabled = q.fxaa
 
-    // Globe fallback settings
-    viewer.scene.globe.enableLighting = true
-
-    // ── Tile memory budget ──────────────────────────────────────────────
-    // This is the single most impactful setting for low-RAM machines.
-    // Cesium will evict tiles from GPU/CPU memory once this cap is hit.
-    viewer.scene.globe.tileCacheSize = 100
-
-    // ── 3D Tiles (skip entirely in dev/potato mode) ─────────────────────
-    if (!q.skip3DTiles && !devMode) {
-      createGooglePhotorealistic3DTileset()
-        .then((tileset) => {
-          tileset.maximumScreenSpaceError = q.sse
-          tileset.skipLevelOfDetail = true
-          tileset.dynamicScreenSpaceError = q.dynamicSSE
-          // Memory budget: limit how much tile data Cesium caches
-          // Cap GPU tile memory (cacheBytes is in bytes)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(tileset as any).cacheBytes = q.tileMemoryMB * 1024 * 1024
-          // Reduce concurrent tile requests to ease network + GPU pressure
-          tileset.preloadFlightDestinations = false
-          tileset.preferLeaves = true
-          viewer.scene.primitives.add(tileset)
-          tilesetRef.current = tileset
-
-          // Altitude-based globe visibility
-          const CITY_THRESHOLD = 200000
-          const syncGlobe = () => {
-            const alt = viewer.camera.positionCartographic?.height ?? Infinity
-            viewer.scene.globe.show = alt > CITY_THRESHOLD
-          }
-          syncGlobeRef.current = syncGlobe
-          syncGlobe()
-          viewer.camera.changed.addEventListener(syncGlobe)
-          viewer.camera.moveEnd.addEventListener(syncGlobe)
-        })
-        .catch((err) => {
-          console.warn('Google 3D Tiles not available, using default globe:', err.message)
-        })
-    }
+    // ── Google Photorealistic 3D Tiles ───────────────────────────────────
+    createGooglePhotorealistic3DTileset()
+      .then((tileset) => {
+        tileset.maximumScreenSpaceError = q.sse
+        tileset.skipLevelOfDetail = true
+        tileset.dynamicScreenSpaceError = q.dynamicSSE
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(tileset as any).cacheBytes = q.tileMemoryMB * 1024 * 1024
+        tileset.preloadFlightDestinations = false
+        tileset.preferLeaves = true
+        viewer.scene.primitives.add(tileset)
+        tilesetRef.current = tileset
+      })
+      .catch((err) => {
+        console.warn('Google 3D Tiles not available:', err.message)
+      })
 
     // Pin clock to solar noon
     const initNoon = new Date()
@@ -304,10 +277,7 @@ export default function GlobeViewer() {
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handler.setInputAction((movement: any) => {
-      const cartesian = viewer.camera.pickEllipsoid(
-        movement.endPosition,
-        viewer.scene.globe.ellipsoid
-      )
+      const cartesian = viewer.camera.pickEllipsoid(movement.endPosition)
       if (defined(cartesian)) {
         Cartographic.fromCartesian(cartesian)
       }
@@ -325,7 +295,7 @@ export default function GlobeViewer() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setPosition, setFps, setViewerReady, devMode])
+  }, [setPosition, setFps, setViewerReady])
 
   // ── Apply render quality at runtime ─────────────────────────────────────
   // Changing quality doesn't require re-creating the viewer — we just
@@ -358,18 +328,8 @@ export default function GlobeViewer() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(tilesetRef.current as any).cacheBytes = q.tileMemoryMB * 1024 * 1024
       tilesetRef.current.dynamicScreenSpaceError = q.dynamicSSE
-
-      // In dev/potato: hide 3D tiles entirely
-      if (q.skip3DTiles || devMode) {
-        tilesetRef.current.show = false
-        viewer.scene.globe.show = true
-      } else {
-        tilesetRef.current.show = true
-        // Re-run altitude sync
-        syncGlobeRef.current?.()
-      }
     }
-  }, [performanceMode, renderQuality, devMode, viewerRef])
+  }, [performanceMode, renderQuality, viewerRef])
 
   // React to preset changes — skip initial mount
   useEffect(() => {

@@ -21,7 +21,6 @@ interface MapState {
   activeCity: string | null
   activeLandmark: string | null
   layoutMode: LayoutMode
-  devMode: boolean
   renderQuality: RenderQuality
 
   setPosition: (position: Partial<MapPosition>) => void
@@ -43,7 +42,6 @@ interface MapState {
   setActiveCity: (city: string | null) => void
   setActiveLandmark: (id: string | null) => void
   setLayoutMode: (mode: LayoutMode) => void
-  toggleDevMode: () => void
   setRenderQuality: (quality: RenderQuality) => void
 }
 
@@ -105,7 +103,6 @@ export const useMapStore = create<MapState>((set, get) => ({
   activeCity: null,
   activeLandmark: null,
   layoutMode: 'tactical',
-  devMode: false,
   renderQuality: 'high',
   setTimeRange: (range) => set({ timeRange: range }),
   setPendingFlyTo: (target) => set({ pendingFlyTo: target }),
@@ -116,6 +113,5 @@ export const useMapStore = create<MapState>((set, get) => ({
   setActiveCity: (city) => set({ activeCity: city, activeLandmark: null }),
   setActiveLandmark: (id) => set({ activeLandmark: id }),
   setLayoutMode: (mode) => set({ layoutMode: mode }),
-  toggleDevMode: () => set((state) => ({ devMode: !state.devMode })),
   setRenderQuality: (quality) => set({ renderQuality: quality }),
 }))
