@@ -20,9 +20,9 @@ describe('HudOverlay', () => {
     })
   })
 
-  it('renders classification banner', () => {
+  it('renders branding banner', () => {
     render(<HudOverlay />)
-    expect(screen.getByText('TOP SECRET // SI-TK // NOFORN')).toBeInTheDocument()
+    expect(screen.getByText('UPPER LEDGER TERMINAL')).toBeInTheDocument()
   })
 
   it('displays the visual mode name', () => {

@@ -12,30 +12,60 @@ import { CctvPopup } from '../../features/cctv/CctvPopup'
 import { WebcamPopup } from '../../features/webcams/WebcamPopup'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
+import EntityTooltip from './EntityTooltip'
+import EntityDetailPanels from '../panels/EntityDetailPanel'
 
-function useEntityClickHandler() {
+function useEntityInteraction() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
   const setSelectedEntityId = useMapStore((s) => s.setSelectedEntityId)
+  const setHoveredEntity = useMapStore((s) => s.setHoveredEntity)
+  const openPanel = useMapStore((s) => s.openPanel)
 
   useEffect(() => {
     const viewer = viewerRef.current
     if (!viewer || !viewerReady || viewer.isDestroyed()) return
 
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas)
+
+    // Click handler — open detail panel or CCTV/Webcam popup
     handler.setInputAction((click: { position: Cartesian2 }) => {
       const picked = viewer.scene.pick(click.position)
       if (picked?.id instanceof Entity && typeof picked.id.id === 'string') {
         const entityId = picked.id.id
         if (entityId.startsWith('cctv-') || entityId.startsWith('webcam-')) {
           setSelectedEntityId(entityId)
+          openPanel(entityId)
           return
         }
+        openPanel(entityId)
+        return
       }
       setSelectedEntityId(null)
     }, ScreenSpaceEventType.LEFT_CLICK)
 
-    return () => handler.destroy()
-  }, [viewerRef, viewerReady, setSelectedEntityId])
+    // Hover handler — show tooltip
+    handler.setInputAction((move: { endPosition: Cartesian2 }) => {
+      const picked = viewer.scene.pick(move.endPosition)
+      if (picked?.id instanceof Entity && typeof picked.id.id === 'string') {
+        const entity = picked.id
+        setHoveredEntity({
+          id: entity.id,
+          screenX: move.endPosition.x,
+          screenY: move.endPosition.y,
+          name: entity.name ?? entity.id,
+        })
+        viewer.scene.canvas.style.cursor = 'pointer'
+      } else {
+        setHoveredEntity(null)
+        viewer.scene.canvas.style.cursor = ''
+      }
+    }, ScreenSpaceEventType.MOUSE_MOVE)
+
+    return () => {
+      handler.destroy()
+      setHoveredEntity(null)
+    }
+  }, [viewerRef, viewerReady, setSelectedEntityId, setHoveredEntity, openPanel])
 }
 
 export default function LayerRenderer() {
@@ -46,13 +76,15 @@ export default function LayerRenderer() {
   useWebcamsLayer()
   useMilitaryBasesLayer()
   useVisualMode()
-  useEntityClickHandler()
+  useEntityInteraction()
 
   return (
     <>
       <BroadcastPanel />
       <CctvPopup />
       <WebcamPopup />
+      <EntityTooltip />
+      <EntityDetailPanels />
     </>
   )
 }

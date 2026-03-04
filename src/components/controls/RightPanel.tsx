@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import {
-  Play,
   Sparkles,
   Sun,
   Crosshair,
   Layout,
-  ScanSearch,
   EyeOff,
   ChevronDown,
   Minus,
   Plus,
   Gauge,
   Zap,
+  Home,
+  Circle,
 } from 'lucide-react'
 import { useMapStore } from '../../store/useMapStore'
 import type { VisualMode, LayoutMode, RenderQuality } from '../../types'
@@ -31,10 +31,12 @@ function SliderRow({
   max?: number
 }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5">
-      <span className="text-[9px] text-[#555] font-mono tracking-wider w-16 shrink-0 uppercase">
-        {label}
-      </span>
+    <div className="flex items-center gap-2 px-3 py-1.5 min-w-0">
+      {label && (
+        <span className="text-[9px] text-[#555] font-mono tracking-wider w-16 shrink-0 uppercase">
+          {label}
+        </span>
+      )}
       <input
         type="range"
         min={min}
@@ -162,6 +164,9 @@ export default function RightPanel() {
     renderQuality,
     setRenderQuality,
     fps,
+    circularViewport,
+    toggleCircularViewport,
+    flyHome,
   } = useMapStore()
 
   const [layoutOpen, setLayoutOpen] = useState(false)
@@ -177,11 +182,19 @@ export default function RightPanel() {
     <div className="fixed top-24 right-4 z-30 flex flex-col gap-[1px] w-[180px] pointer-events-auto">
       {/* Main controls card */}
       <div className="bg-[#0a0a0a]/90 backdrop-blur-sm border border-[#222] rounded overflow-hidden">
-        {/* MOVE */}
+        {/* HOME */}
         <ControlButton
-          icon={<Play size={13} />}
-          label="MOVE"
-          onClick={() => {}}
+          icon={<Home size={13} />}
+          label="HOME"
+          onClick={flyHome}
+        />
+
+        {/* VIEWPORT */}
+        <ControlButton
+          icon={<Circle size={13} />}
+          label="VIEWPORT"
+          active={circularViewport}
+          onClick={toggleCircularViewport}
         />
 
         {/* BLOOM */}
@@ -252,13 +265,6 @@ export default function RightPanel() {
             </div>
           )}
         </div>
-
-        {/* DETECT */}
-        <ControlButton
-          icon={<ScanSearch size={13} />}
-          label="DETECT"
-          onClick={() => {}}
-        />
 
         {/* CLEAN UI */}
         <ControlButton

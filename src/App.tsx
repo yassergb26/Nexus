@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Eye } from 'lucide-react'
 import GlobeViewer from './components/globe/GlobeViewer'
 import HudOverlay from './components/hud/HudOverlay'
 import Sidebar from './components/sidebar/Sidebar'
@@ -7,13 +8,14 @@ import StylePresetsBar from './components/controls/StylePresetsBar'
 import LocationsBar from './components/controls/LocationsBar'
 import LayerRenderer from './components/globe/LayerRenderer'
 import { CommandPalette } from './components/CommandPalette'
+import LayerLegend from './components/panels/LayerLegend'
 import { CesiumViewerProvider } from './contexts/CesiumViewerContext'
 import { useMapStore } from './store/useMapStore'
 import { decodeUrlState } from './utils/urlState'
 import { REGIONAL_PRESETS } from './utils/presets'
 
 export default function App() {
-  const { setPosition, flyToPreset, toggleLayer } = useMapStore()
+  const { setPosition, flyToPreset, toggleLayer, circularViewport, cleanUI } = useMapStore()
 
   // Restore state from URL on mount
   useEffect(() => {
@@ -52,6 +54,9 @@ export default function App() {
         e.preventDefault()
         useMapStore.getState().toggleHud()
       }
+      if (e.key === 'Escape' && useMapStore.getState().cleanUI) {
+        useMapStore.getState().toggleCleanUI()
+      }
     }
     window.addEventListener('keydown', handleKeydown)
     return () => window.removeEventListener('keydown', handleKeydown)
@@ -80,31 +85,31 @@ export default function App() {
           <rect width="100%" height="100%" fill="url(#topo)" />
         </svg>
 
-        {/* ── Circular viewport mask ─────────────────────────────────────────
-            Dark overlay with a circular hole that reveals the globe through
-            the center — matching the WorldView ISR/IMINT window aesthetic.
-            pointer-events-none so all Cesium interactions still work.        */}
-        <div
-          className="absolute inset-0 z-10 pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(circle 44vh at 50% 52%, transparent 99.5%, #0a0a0a 100%)',
-          }}
-        />
-        {/* Accent ring framing the circular viewport */}
-        <div
-          className="absolute z-10 pointer-events-none rounded-full"
-          style={{
-            top: '52%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '88vh',
-            height: '88vh',
-            border: '1px solid rgba(0, 212, 170, 0.25)',
-            boxShadow:
-              '0 0 60px rgba(0, 212, 170, 0.06), inset 0 0 80px rgba(0, 0, 0, 0.5)',
-          }}
-        />
+        {/* ── Circular viewport mask (toggleable) ──────────────────────────── */}
+        {circularViewport && (
+          <>
+            <div
+              className="absolute inset-0 z-10 pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(circle 44vh at 50% 52%, transparent 99.5%, #0a0a0a 100%)',
+              }}
+            />
+            <div
+              className="absolute z-10 pointer-events-none rounded-full"
+              style={{
+                top: '52%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '88vh',
+                height: '88vh',
+                border: '1px solid rgba(0, 212, 170, 0.25)',
+                boxShadow:
+                  '0 0 60px rgba(0, 212, 170, 0.06), inset 0 0 80px rgba(0, 0, 0, 0.5)',
+              }}
+            />
+          </>
+        )}
 
         {/* ── Overlays ──────────────────────────────────────────────────────
             z-20: HUD edge text
@@ -117,6 +122,20 @@ export default function App() {
         <LocationsBar />
         <StylePresetsBar />
         <CommandPalette />
+        <LayerLegend />
+
+        {/* Floating button to exit Clean UI mode */}
+        {cleanUI && (
+          <button
+            onClick={() => useMapStore.getState().toggleCleanUI()}
+            className="fixed bottom-4 right-4 z-50 w-9 h-9 rounded-full bg-[#111]/70 backdrop-blur-sm
+                       border border-[#333] flex items-center justify-center
+                       hover:bg-[#1a1a1a] hover:border-[#00d4aa]/40 transition-all group"
+            title="Exit Clean UI (Esc)"
+          >
+            <Eye size={14} className="text-[#555] group-hover:text-[#00d4aa] transition-colors" />
+          </button>
+        )}
       </div>
     </CesiumViewerProvider>
   )

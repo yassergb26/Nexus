@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
-import { CustomDataSource, Cartesian3, Color, NearFarScalar, ConstantProperty } from 'cesium'
+import { useEffect, useRef, useMemo } from 'react'
+import { CustomDataSource, Cartesian3, NearFarScalar, ConstantProperty } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
 import { MILITARY_BASES } from '../../data/military-bases'
+import { shieldIcon } from '../../utils/iconBuilder'
 
 const OP_COLOR: Record<string, string> = {
   USA:    '#ef4444',
@@ -19,6 +20,14 @@ export function useMilitaryBasesLayer() {
   const isEnabled = useMapStore((s) => s.layers.find((l) => l.id === 'bases')?.enabled ?? false)
   const setLayerCount = useMapStore((s) => s.setLayerCount)
   const dataSourceRef = useRef<CustomDataSource | null>(null)
+
+  const iconCache = useMemo(() => {
+    const cache: Record<string, string> = {}
+    for (const [op, color] of Object.entries(OP_COLOR)) {
+      cache[op] = shieldIcon(color)
+    }
+    return cache
+  }, [])
 
   useEffect(() => {
     const viewer = viewerRef.current
@@ -39,18 +48,17 @@ export function useMilitaryBasesLayer() {
     if (!isEnabled) { setLayerCount('bases', 0); return }
 
     for (const base of MILITARY_BASES) {
-      const color = Color.fromCssColorString(OP_COLOR[base.operator] ?? '#6b7280')
-      const size = base.type === 'nuclear' ? 11 : base.type === 'space' ? 9 : 7
+      const icon = iconCache[base.operator] ?? iconCache['other']
+      const size = base.type === 'nuclear' ? 28 : base.type === 'space' ? 24 : 20
       ds.entities.add({
         id: 'base-' + base.id,
         name: base.name,
         position: Cartesian3.fromDegrees(base.lon, base.lat, 0),
-        point: {
-          pixelSize: size,
-          color: color.withAlpha(0.9),
-          outlineColor: color.withAlpha(0.4),
-          outlineWidth: 2,
-          scaleByDistance: new NearFarScalar(1e5, 1.8, 2e7, 0.5),
+        billboard: {
+          image: icon,
+          width: size,
+          height: size,
+          scaleByDistance: new NearFarScalar(1e5, 1.5, 2e7, 0.4),
         },
         description: new ConstantProperty(
           '<b>' + base.name + '</b><br/>Country: ' + base.country +
@@ -59,5 +67,5 @@ export function useMilitaryBasesLayer() {
       })
     }
     setLayerCount('bases', MILITARY_BASES.length)
-  }, [isEnabled, setLayerCount])
+  }, [isEnabled, setLayerCount, iconCache])
 }

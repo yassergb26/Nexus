@@ -115,7 +115,7 @@ export default function HudOverlay() {
       {/* ── Top-left: Classification + Satellite ID + Mode ──────────────── */}
       <div className="fixed top-4 left-4 z-40 pointer-events-none font-mono">
         <div className="text-[#00d4aa] text-[11px] tracking-[0.25em] font-bold">
-          TOP SECRET // SI-TK // NOFORN
+          UPPER LEDGER TERMINAL
         </div>
         <div className="flex items-center gap-3 mt-1">
           {/* Corner bracket */}

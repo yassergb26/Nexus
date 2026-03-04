@@ -22,6 +22,9 @@ interface MapState {
   activeLandmark: string | null
   layoutMode: LayoutMode
   renderQuality: RenderQuality
+  circularViewport: boolean
+  hoveredEntity: { id: string; screenX: number; screenY: number; name: string } | null
+  openPanels: string[]
 
   setPosition: (position: Partial<MapPosition>) => void
   setVisualMode: (mode: VisualMode) => void
@@ -43,6 +46,11 @@ interface MapState {
   setActiveLandmark: (id: string | null) => void
   setLayoutMode: (mode: LayoutMode) => void
   setRenderQuality: (quality: RenderQuality) => void
+  toggleCircularViewport: () => void
+  flyHome: () => void
+  setHoveredEntity: (entity: { id: string; screenX: number; screenY: number; name: string } | null) => void
+  openPanel: (id: string) => void
+  closePanel: (id: string) => void
 }
 
 export const useMapStore = create<MapState>((set, get) => ({
@@ -104,6 +112,9 @@ export const useMapStore = create<MapState>((set, get) => ({
   activeLandmark: null,
   layoutMode: 'tactical',
   renderQuality: 'high',
+  circularViewport: true,
+  hoveredEntity: null,
+  openPanels: [],
   setTimeRange: (range) => set({ timeRange: range }),
   setPendingFlyTo: (target) => set({ pendingFlyTo: target }),
   togglePerformanceMode: () => set((state) => ({ performanceMode: !state.performanceMode })),
@@ -114,4 +125,13 @@ export const useMapStore = create<MapState>((set, get) => ({
   setActiveLandmark: (id) => set({ activeLandmark: id }),
   setLayoutMode: (mode) => set({ layoutMode: mode }),
   setRenderQuality: (quality) => set({ renderQuality: quality }),
+  toggleCircularViewport: () => set((state) => ({ circularViewport: !state.circularViewport })),
+  flyHome: () => set({ pendingFlyTo: { lat: 20, lon: 0, alt: 20_000_000, heading: 0, pitch: -90 } }),
+  setHoveredEntity: (entity) => set({ hoveredEntity: entity }),
+  openPanel: (id) => set((state) => {
+    if (state.openPanels.includes(id)) return state
+    const panels = [...state.openPanels, id].slice(-4) // max 4 panels
+    return { openPanels: panels }
+  }),
+  closePanel: (id) => set((state) => ({ openPanels: state.openPanels.filter((p) => p !== id) })),
 }))

@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CustomDataSource, Cartesian3, Color, NearFarScalar } from 'cesium'
+import { CustomDataSource, Cartesian3, NearFarScalar } from 'cesium'
 import * as satellite from 'satellite.js'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
+import { satelliteIcon } from '../../utils/iconBuilder'
+
+const SAT_ICON = satelliteIcon('#8b5cf6')
 
 interface SatRecord {
   name: string
@@ -21,7 +24,7 @@ function propagateToCartesian(satrec: satellite.SatRec): Cartesian3 | null {
     const geo = satellite.eciToGeodetic(pos, gmst)
     const lon = (geo.longitude * 180) / Math.PI
     const lat = (geo.latitude * 180) / Math.PI
-    const alt = geo.height * 1000 // km → m
+    const alt = geo.height * 1000
     if (!isFinite(lon) || !isFinite(lat) || !isFinite(alt) || alt < 0) return null
     return Cartesian3.fromDegrees(lon, lat, alt)
   } catch {
@@ -63,7 +66,7 @@ export function useSatellitesLayer() {
     queryKey: ['satellites-tle'],
     queryFn: fetchStationTLEs,
     enabled: isEnabled,
-    refetchInterval: 6 * 60 * 60_000, // 6 hours
+    refetchInterval: 6 * 60 * 60_000,
     staleTime: 5.5 * 60 * 60_000,
   })
 
@@ -81,7 +84,6 @@ export function useSatellitesLayer() {
     }
   }, [viewerRef, viewerReady])
 
-  // Build entities when TLE data arrives
   useEffect(() => {
     const ds = dataSourceRef.current
     if (!ds) return
@@ -94,7 +96,6 @@ export function useSatellitesLayer() {
       return
     }
 
-    // Add a point entity per satellite
     for (const { name, satrec } of satRecords) {
       const pos = propagateToCartesian(satrec)
       if (!pos) continue
@@ -102,12 +103,11 @@ export function useSatellitesLayer() {
         id: `sat-${name}`,
         name,
         position: pos,
-        point: {
-          pixelSize: 7,
-          color: Color.fromCssColorString('#8b5cf6'),
-          outlineColor: Color.fromCssColorString('#8b5cf6').withAlpha(0.4),
-          outlineWidth: 2,
-          scaleByDistance: new NearFarScalar(1e5, 2.5, 5e7, 0.6),
+        billboard: {
+          image: SAT_ICON,
+          width: 22,
+          height: 22,
+          scaleByDistance: new NearFarScalar(1e5, 2.0, 5e7, 0.5),
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         description: `<b>${name}</b><br/>Orbital Station` as unknown as any,
@@ -115,7 +115,6 @@ export function useSatellitesLayer() {
     }
     setLayerCount('satellites', satRecords.length)
 
-    // Update positions every 5s
     intervalRef.current = setInterval(() => {
       const source = dataSourceRef.current
       if (!source) return

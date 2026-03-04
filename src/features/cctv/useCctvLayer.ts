@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { CustomDataSource, Cartesian3, Color, NearFarScalar } from 'cesium'
+import { CustomDataSource, Cartesian3, NearFarScalar } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
 import { CCTV_CAMERAS } from '../../data/cctv-cameras'
+import { cameraIcon } from '../../utils/iconBuilder'
+
+const CCTV_ICON = cameraIcon('#10b981')
 
 export function useCctvLayer() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
@@ -42,12 +45,11 @@ export function useCctvLayer() {
         id: `cctv-${cam.id}`,
         name: cam.name,
         position: Cartesian3.fromDegrees(cam.longitude, cam.latitude, 0),
-        point: {
-          pixelSize: 10,
-          color: Color.fromCssColorString('#10b981'),
-          outlineColor: Color.fromCssColorString('#10b981').withAlpha(0.5),
-          outlineWidth: 3,
-          scaleByDistance: new NearFarScalar(1e4, 2.0, 1e7, 0.5),
+        billboard: {
+          image: CCTV_ICON,
+          width: 24,
+          height: 24,
+          scaleByDistance: new NearFarScalar(1e4, 1.8, 1e7, 0.4),
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         description: cam.name as unknown as any,

@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CustomDataSource, Cartesian3, Color, NearFarScalar, HeadingPitchRoll } from 'cesium'
+import { CustomDataSource, Cartesian3, NearFarScalar, Math as CesiumMath } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
 import { fetchFlights } from '../../services/opensky'
+import { airplaneIcon } from '../../utils/iconBuilder'
+
+const FLIGHT_ICON = airplaneIcon('#00d4aa')
 
 export function useFlightsLayer() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
@@ -44,7 +47,6 @@ export function useFlightsLayer() {
       return
     }
 
-    // Cap at 3000 for performance
     const flights = data.filter((f) => !f.onGround).slice(0, 3000)
 
     for (const flight of flights) {
@@ -53,17 +55,16 @@ export function useFlightsLayer() {
         id: `flight-${flight.icao24}`,
         name: flight.callsign || flight.icao24,
         position: Cartesian3.fromDegrees(flight.longitude, flight.latitude, alt),
-        point: {
-          pixelSize: 4,
-          color: Color.fromCssColorString('#00d4aa'),
-          outlineColor: Color.fromCssColorString('#00d4aa').withAlpha(0.3),
-          outlineWidth: 2,
-          scaleByDistance: new NearFarScalar(1e5, 2.0, 1e7, 0.4),
+        billboard: {
+          image: FLIGHT_ICON,
+          width: 20,
+          height: 20,
+          rotation: CesiumMath.toRadians(-flight.heading),
+          alignedAxis: Cartesian3.UNIT_Z,
+          scaleByDistance: new NearFarScalar(1e5, 1.5, 1e7, 0.3),
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         description: `<b>${flight.callsign || flight.icao24}</b><br/>Origin: ${flight.originCountry}<br/>Altitude: ${(alt / 1000).toFixed(1)} km<br/>Speed: ${flight.velocity.toFixed(0)} m/s<br/>Heading: ${flight.heading.toFixed(0)}°` as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        orientation: HeadingPitchRoll.fromDegrees(flight.heading, 0, 0) as any,
       })
     }
     setLayerCount('flights', flights.length)
