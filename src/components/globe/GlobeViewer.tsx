@@ -39,8 +39,8 @@ interface QualitySettings {
   requestRenderMode: boolean  // true = only re-render on camera move
   dynamicSSE: boolean
   preloadFlyTo: boolean       // pre-fetch tiles at camera fly destination
+  foveatedEnabled: boolean    // prioritize center-screen tile loading
   foveatedConeSize: number    // center-screen cone (0 = none, 0.3 = default)
-  progressiveHeight: number   // show low-res placeholders while loading (0–1)
 }
 
 const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
@@ -58,7 +58,7 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     dynamicSSE: true,
     preloadFlyTo: true,
     foveatedConeSize: 0.1,
-    progressiveHeight: 0.3,
+    foveatedEnabled: true,
   },
   high: {
     resolutionScale: 1.0,
@@ -74,7 +74,7 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     dynamicSSE: true,
     preloadFlyTo: true,
     foveatedConeSize: 0.2,
-    progressiveHeight: 0.4,
+    foveatedEnabled: true,
   },
   medium: {
     resolutionScale: 0.85,
@@ -90,7 +90,7 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     dynamicSSE: true,
     preloadFlyTo: false,
     foveatedConeSize: 0.3,
-    progressiveHeight: 0.5,
+    foveatedEnabled: false,
   },
   low: {
     resolutionScale: 0.65,
@@ -106,7 +106,7 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     dynamicSSE: false,
     preloadFlyTo: false,
     foveatedConeSize: 0.4,
-    progressiveHeight: 0.5,
+    foveatedEnabled: false,
   },
   potato: {
     resolutionScale: 0.5,
@@ -122,7 +122,7 @@ const QUALITY_PRESETS: Record<RenderQuality, QualitySettings> = {
     dynamicSSE: false,
     preloadFlyTo: false,
     foveatedConeSize: 0.5,
-    progressiveHeight: 0.5,
+    foveatedEnabled: false,
   },
 }
 
@@ -225,32 +225,33 @@ export default function GlobeViewer() {
         // Core quality: lower SSE = sharper buildings, more tiles loaded
         tileset.maximumScreenSpaceError = q.sse
 
-        // Level-of-detail skipping: jump to desired LOD faster
-        tileset.skipLevelOfDetail = true
-        tileset.baseScreenSpaceError = 1024
-        tileset.skipScreenSpaceErrorFactor = 16
-        tileset.skipLevels = 1
-        tileset.immediatelyLoadDesiredLevelOfDetail = false
+        // IMPORTANT: skipLevelOfDetail must be FALSE for sharp buildings.
+        // When true, low-res ancestor tiles bleed through while children
+        // load, causing blurry/popping artifacts (CesiumGS/cesium#7903).
+        // Cesium changed default to false in v1.67 for this reason.
+        tileset.skipLevelOfDetail = false
 
-        // Dynamic SSE: reduce quality for distant horizon tiles
+        // Dynamic SSE: slightly reduce quality only for far-horizon tiles
         tileset.dynamicScreenSpaceError = q.dynamicSSE
-        tileset.dynamicScreenSpaceErrorDensity = 0.00278
-        tileset.dynamicScreenSpaceErrorFactor = 4.0
+        tileset.dynamicScreenSpaceErrorDensity = 0.0018
+        tileset.dynamicScreenSpaceErrorFactor = 2.0
         tileset.dynamicScreenSpaceErrorHeightFalloff = 0.25
 
-        // Foveated rendering: full quality in center, reduced at edges
-        tileset.foveatedScreenSpaceError = true
+        // Foveated rendering: prioritize center-screen loading order,
+        // but keep relaxation at 0 so edge tiles still reach full quality
+        tileset.foveatedScreenSpaceError = q.foveatedEnabled
         tileset.foveatedConeSize = q.foveatedConeSize
         tileset.foveatedMinimumScreenSpaceErrorRelaxation = 0.0
-        tileset.foveatedTimeDelay = 0.2
+        tileset.foveatedTimeDelay = 0.1
 
         // Loading strategy
-        tileset.preferLeaves = true
+        tileset.preferLeaves = false
         tileset.loadSiblings = true
         tileset.preloadFlightDestinations = q.preloadFlyTo
-        tileset.progressiveResolutionHeightFraction = q.progressiveHeight
+        // 0 = always show full-res immediately, no low-res placeholders
+        tileset.progressiveResolutionHeightFraction = 0.0
 
-        // Memory budget
+        // Memory budget — generous to avoid evicting sharp tiles
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(tileset as any).cacheBytes = q.tileMemoryMB * 1024 * 1024
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -378,9 +379,9 @@ export default function GlobeViewer() {
     if (tilesetRef.current) {
       tilesetRef.current.maximumScreenSpaceError = q.sse
       tilesetRef.current.dynamicScreenSpaceError = q.dynamicSSE
+      tilesetRef.current.foveatedScreenSpaceError = q.foveatedEnabled
       tilesetRef.current.foveatedConeSize = q.foveatedConeSize
       tilesetRef.current.preloadFlightDestinations = q.preloadFlyTo
-      tilesetRef.current.progressiveResolutionHeightFraction = q.progressiveHeight
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(tilesetRef.current as any).cacheBytes = q.tileMemoryMB * 1024 * 1024
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
