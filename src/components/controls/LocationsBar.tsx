@@ -37,18 +37,18 @@ export default function LocationsBar() {
 
   const handleCityClick = (city: CityName) => {
     if (activeCity === city) {
-      // Deselect
       setActiveCity(null)
       return
     }
     setActiveCity(city)
     const center = CITY_CENTERS[city]
+    // Offset camera ~2km south so it looks north toward the city center
     setPendingFlyTo({
-      lat: center.lat,
+      lat: center.lat - 0.012,
       lon: center.lon,
-      alt: 8000,
+      alt: 1500,
       heading: 0,
-      pitch: -35,
+      pitch: -20,
     })
   }
 
@@ -56,12 +56,13 @@ export default function LocationsBar() {
     const lm = LANDMARKS.find((l) => l.id === id)
     if (!lm) return
     setActiveLandmark(id)
+    // Offset camera ~500m south-west so it looks toward the landmark
     setPendingFlyTo({
-      lat: lm.lat,
-      lon: lm.lon,
-      alt: 800,
-      heading: 0,
-      pitch: -25,
+      lat: lm.lat - 0.003,
+      lon: lm.lon - 0.002,
+      alt: 500,
+      heading: 30,
+      pitch: -18,
     })
   }
 

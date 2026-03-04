@@ -120,7 +120,7 @@ export function CommandPalette() {
         key: `c-${c.name}`, type: 'city',
         label: c.name, sub: c.sub,
         action: () => {
-          setPendingFlyTo({ lat: c.lat, lon: c.lon, alt: 4000, heading: 0, pitch: -35 })
+          setPendingFlyTo({ lat: c.lat - 0.012, lon: c.lon, alt: 2000, heading: 0, pitch: -20 })
           setOpen(false)
         },
       })
