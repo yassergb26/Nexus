@@ -137,11 +137,9 @@ export const useMapStore = create<MapState>((set, get) => ({
   toggleCircularViewport: () => set((state) => ({ circularViewport: !state.circularViewport })),
   flyHome: () => set({ pendingFlyTo: { lat: 20, lon: 0, alt: 20_000_000, heading: 0, pitch: -90 } }),
   resetAll: () => set({
-    pendingFlyTo: { lat: 20, lon: 0, alt: 20_000_000, heading: 0, pitch: -90 },
     layers: DEFAULT_LAYERS,
     openPanels: [],
-    activeCity: null,
-    activeLandmark: null,
+    selectedEntityId: null,
     layoutMode: 'standard',
     hudVisible: false,
     circularViewport: false,
