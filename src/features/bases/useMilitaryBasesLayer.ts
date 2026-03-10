@@ -6,12 +6,12 @@ import { MILITARY_BASES } from '../../data/military-bases'
 import { shieldIcon } from '../../utils/iconBuilder'
 
 const OP_COLOR: Record<string, string> = {
-  USA:    '#ef4444',
+  USA:    '#60a5fa',
   NATO:   '#3b82f6',
-  Russia: '#f59e0b',
-  China:  '#dc2626',
-  UK:     '#6366f1',
-  France: '#8b5cf6',
+  Russia: '#f97316',
+  China:  '#ef4444',
+  UK:     '#818cf8',
+  France: '#93c5fd',
   other:  '#6b7280',
 }
 
@@ -49,15 +49,14 @@ export function useMilitaryBasesLayer() {
 
     for (const base of MILITARY_BASES) {
       const icon = iconCache[base.operator] ?? iconCache['other']
-      const size = base.type === 'nuclear' ? 28 : base.type === 'space' ? 24 : 20
       ds.entities.add({
         id: 'base-' + base.id,
         name: base.name,
         position: Cartesian3.fromDegrees(base.lon, base.lat, 0),
         billboard: {
           image: icon,
-          width: size,
-          height: size,
+          width: 22,
+          height: 22,
           scaleByDistance: new NearFarScalar(1e5, 1.5, 2e7, 0.4),
         },
         description: new ConstantProperty(

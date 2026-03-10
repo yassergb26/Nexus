@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useMapStore } from '../../store/useMapStore'
 
 interface LegendItem {
@@ -12,12 +10,12 @@ const FLIGHT_LEGEND: LegendItem[] = [
 ]
 
 const BASE_LEGEND: LegendItem[] = [
-  { color: '#ef4444', label: 'USA' },
+  { color: '#60a5fa', label: 'USA' },
   { color: '#3b82f6', label: 'NATO' },
-  { color: '#f59e0b', label: 'Russia' },
-  { color: '#dc2626', label: 'China' },
-  { color: '#6366f1', label: 'UK' },
-  { color: '#8b5cf6', label: 'France' },
+  { color: '#818cf8', label: 'UK' },
+  { color: '#93c5fd', label: 'France' },
+  { color: '#f97316', label: 'Russia' },
+  { color: '#ef4444', label: 'China' },
   { color: '#6b7280', label: 'Other' },
 ]
 
@@ -71,7 +69,6 @@ function LegendSection({ title, items, enabled }: LegendSectionProps) {
 }
 
 export default function LayerLegend() {
-  const [open, setOpen] = useState(false)
   const layers = useMapStore((s) => s.layers)
   const cleanUI = useMapStore((s) => s.cleanUI)
 
@@ -80,34 +77,25 @@ export default function LayerLegend() {
   const isEnabled = (id: string) => layers.find((l) => l.id === id)?.enabled ?? false
   const anyEnabled = ['flights', 'bases', 'earthquakes', 'satellites', 'cctv', 'webcams'].some(isEnabled)
 
-  if (!anyEnabled) return null
-
   return (
-    <div className="fixed bottom-24 left-4 z-30 pointer-events-auto">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#0a0a0a]/90 backdrop-blur-sm
-                   border border-[#222] rounded hover:border-[#00d4aa]/30 transition-colors"
-      >
-        <div className="flex gap-0.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
-          <div className="w-1.5 h-1.5 rounded-full bg-[#00d4aa]" />
-          <div className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+    <div className="fixed bottom-8 left-4 z-30 pointer-events-auto">
+      <div className="bg-[#0a0a0a]/95 backdrop-blur-sm border border-[#222] rounded p-3 min-w-[140px] max-h-[300px] overflow-y-auto">
+        <div className="text-[8px] font-mono tracking-[0.15em] text-[#555] uppercase mb-2">
+          LEGEND
         </div>
-        <span className="text-[9px] font-mono tracking-wider text-[#888] uppercase">LEGEND</span>
-        {open ? <ChevronDown size={10} className="text-[#555]" /> : <ChevronUp size={10} className="text-[#555]" />}
-      </button>
-
-      {open && (
-        <div className="mt-1 bg-[#0a0a0a]/95 backdrop-blur-sm border border-[#222] rounded p-3 max-h-[300px] overflow-y-auto">
-          <LegendSection title="Flights" items={FLIGHT_LEGEND} enabled={isEnabled('flights')} />
-          <LegendSection title="Military Bases" items={BASE_LEGEND} enabled={isEnabled('bases')} />
-          <LegendSection title="Earthquakes" items={EARTHQUAKE_LEGEND} enabled={isEnabled('earthquakes')} />
-          <LegendSection title="Satellites" items={SATELLITE_LEGEND} enabled={isEnabled('satellites')} />
-          <LegendSection title="CCTV" items={CCTV_LEGEND} enabled={isEnabled('cctv')} />
-          <LegendSection title="Webcams" items={WEBCAM_LEGEND} enabled={isEnabled('webcams')} />
-        </div>
-      )}
+        {anyEnabled ? (
+          <>
+            <LegendSection title="Flights" items={FLIGHT_LEGEND} enabled={isEnabled('flights')} />
+            <LegendSection title="Military Bases" items={BASE_LEGEND} enabled={isEnabled('bases')} />
+            <LegendSection title="Earthquakes" items={EARTHQUAKE_LEGEND} enabled={isEnabled('earthquakes')} />
+            <LegendSection title="Satellites" items={SATELLITE_LEGEND} enabled={isEnabled('satellites')} />
+            <LegendSection title="CCTV" items={CCTV_LEGEND} enabled={isEnabled('cctv')} />
+            <LegendSection title="Webcams" items={WEBCAM_LEGEND} enabled={isEnabled('webcams')} />
+          </>
+        ) : (
+          <div className="text-[9px] font-mono text-[#333]">No layers active</div>
+        )}
+      </div>
     </div>
   )
 }

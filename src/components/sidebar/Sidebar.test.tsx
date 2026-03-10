@@ -25,11 +25,6 @@ describe('Sidebar', () => {
     expect(screen.getByText('DATA LAYERS')).toBeInTheDocument()
   })
 
-  it('renders SCENES panel header', () => {
-    render(<Sidebar />)
-    expect(screen.getByText('SCENES')).toBeInTheDocument()
-  })
-
   it('renders nothing when cleanUI is true', () => {
     useMapStore.setState({ cleanUI: true })
     const { container } = render(<Sidebar />)
@@ -73,10 +68,4 @@ describe('Sidebar', () => {
     expect(screen.getByText('Camera feeds')).toBeInTheDocument()
   })
 
-  it('shows scenes placeholder when expanded', async () => {
-    const user = userEvent.setup()
-    render(<Sidebar />)
-    await user.click(screen.getByText('SCENES'))
-    expect(screen.getByText('No saved scenes')).toBeInTheDocument()
-  })
 })

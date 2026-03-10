@@ -168,15 +168,6 @@ export default function Sidebar() {
         </div>
       </CollapsiblePanel>
 
-      {/* SCENES */}
-      <CollapsiblePanel title="SCENES">
-        <div className="px-5 py-3.5">
-          <div className="text-[10px] text-[#555] font-mono">No saved scenes</div>
-          <div className="mt-2 text-[9px] text-[#333] font-mono">
-            Save camera positions as reusable presets
-          </div>
-        </div>
-      </CollapsiblePanel>
     </div>
   )
 }

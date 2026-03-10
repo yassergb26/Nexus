@@ -4,14 +4,13 @@ import {
   Sun,
   Crosshair,
   Layout,
-  EyeOff,
   ChevronDown,
   Minus,
   Plus,
   Gauge,
   Zap,
   Home,
-  Circle,
+  RotateCcw,
 } from 'lucide-react'
 import { useMapStore } from '../../store/useMapStore'
 import type { VisualMode, LayoutMode, RenderQuality } from '../../types'
@@ -99,8 +98,8 @@ function ControlButton({
 }
 
 const LAYOUT_OPTIONS: { id: LayoutMode; label: string }[] = [
+  { id: 'standard', label: 'Standard' },
   { id: 'tactical', label: 'Tactical' },
-  { id: 'clean', label: 'Clean' },
   { id: 'cinematic', label: 'Cinematic' },
 ]
 
@@ -157,16 +156,14 @@ export default function RightPanel() {
     hudVisible,
     toggleHud,
     cleanUI,
-    toggleCleanUI,
     visualMode,
     layoutMode,
     setLayoutMode,
     renderQuality,
     setRenderQuality,
     fps,
-    circularViewport,
-    toggleCircularViewport,
     flyHome,
+    resetAll,
   } = useMapStore()
 
   const [layoutOpen, setLayoutOpen] = useState(false)
@@ -189,12 +186,11 @@ export default function RightPanel() {
           onClick={flyHome}
         />
 
-        {/* VIEWPORT */}
+        {/* RESET */}
         <ControlButton
-          icon={<Circle size={13} />}
-          label="VIEWPORT"
-          active={circularViewport}
-          onClick={toggleCircularViewport}
+          icon={<RotateCcw size={13} />}
+          label="RESET"
+          onClick={resetAll}
         />
 
         {/* BLOOM */}
@@ -266,12 +262,6 @@ export default function RightPanel() {
           )}
         </div>
 
-        {/* CLEAN UI */}
-        <ControlButton
-          icon={<EyeOff size={13} />}
-          label="CLEAN UI"
-          onClick={toggleCleanUI}
-        />
       </div>
 
       {/* ── RENDER QUALITY panel ─────────────────────────────────────────── */}

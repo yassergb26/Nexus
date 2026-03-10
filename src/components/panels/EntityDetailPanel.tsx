@@ -83,7 +83,7 @@ export default function EntityDetailPanels() {
   if (cleanUI || openPanels.length === 0) return null
 
   return (
-    <div className="fixed top-24 right-[200px] z-30 flex flex-col gap-2 pointer-events-auto max-h-[calc(100vh-120px)] overflow-y-auto">
+    <div className="fixed bottom-20 right-4 z-30 flex flex-col gap-2 pointer-events-auto max-h-[45vh] overflow-y-auto">
       {openPanels.map((id) => {
         if (id.startsWith('cctv-')) return <CctvDetail key={id} id={id} />
         if (id.startsWith('webcam-')) return <WebcamDetail key={id} id={id} />

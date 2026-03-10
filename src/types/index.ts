@@ -84,6 +84,6 @@ export interface Landmark {
   icon?: string
 }
 
-export type LayoutMode = 'tactical' | 'clean' | 'cinematic'
+export type LayoutMode = 'standard' | 'tactical' | 'cinematic'
 
 export type RenderQuality = 'ultra' | 'high' | 'medium' | 'low' | 'potato'

@@ -48,6 +48,7 @@ interface MapState {
   setRenderQuality: (quality: RenderQuality) => void
   toggleCircularViewport: () => void
   flyHome: () => void
+  resetAll: () => void
   setHoveredEntity: (entity: { id: string; screenX: number; screenY: number; name: string } | null) => void
   openPanel: (id: string) => void
   closePanel: (id: string) => void
@@ -65,7 +66,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   layers: DEFAULT_LAYERS,
   activePreset: 'global',
   sidebarOpen: true,
-  hudVisible: true,
+  hudVisible: false,
   fps: 60,
   selectedEntityId: null,
 
@@ -110,9 +111,9 @@ export const useMapStore = create<MapState>((set, get) => ({
   cleanUI: false,
   activeCity: null,
   activeLandmark: null,
-  layoutMode: 'tactical',
+  layoutMode: 'standard',
   renderQuality: 'high',
-  circularViewport: true,
+  circularViewport: false,
   hoveredEntity: null,
   openPanels: [],
   setTimeRange: (range) => set({ timeRange: range }),
@@ -123,10 +124,32 @@ export const useMapStore = create<MapState>((set, get) => ({
   toggleCleanUI: () => set((state) => ({ cleanUI: !state.cleanUI })),
   setActiveCity: (city) => set({ activeCity: city, activeLandmark: null }),
   setActiveLandmark: (id) => set({ activeLandmark: id }),
-  setLayoutMode: (mode) => set({ layoutMode: mode }),
+  setLayoutMode: (mode) => {
+    if (mode === 'standard') {
+      set({ layoutMode: mode, hudVisible: false, circularViewport: false, cleanUI: false })
+    } else if (mode === 'tactical') {
+      set({ layoutMode: mode, hudVisible: true, circularViewport: true, cleanUI: false })
+    } else if (mode === 'cinematic') {
+      set({ layoutMode: mode, hudVisible: false, circularViewport: false, cleanUI: true })
+    }
+  },
   setRenderQuality: (quality) => set({ renderQuality: quality }),
   toggleCircularViewport: () => set((state) => ({ circularViewport: !state.circularViewport })),
   flyHome: () => set({ pendingFlyTo: { lat: 20, lon: 0, alt: 20_000_000, heading: 0, pitch: -90 } }),
+  resetAll: () => set({
+    pendingFlyTo: { lat: 20, lon: 0, alt: 20_000_000, heading: 0, pitch: -90 },
+    layers: DEFAULT_LAYERS,
+    openPanels: [],
+    activeCity: null,
+    activeLandmark: null,
+    layoutMode: 'standard',
+    hudVisible: false,
+    circularViewport: false,
+    cleanUI: false,
+    bloomEnabled: false,
+    sharpenAmount: 49,
+    visualMode: 'normal',
+  }),
   setHoveredEntity: (entity) => set({ hoveredEntity: entity }),
   openPanel: (id) => set((state) => {
     if (state.openPanels.includes(id)) return state

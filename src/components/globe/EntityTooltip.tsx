@@ -18,7 +18,7 @@ export default function EntityTooltip() {
           {hoveredEntity.name}
         </div>
         <div className="text-[8px] font-mono text-[#555] tracking-wider mt-0.5 uppercase">
-          {hoveredEntity.id.split('-')[0]}
+          {hoveredEntity.id.startsWith('base-') ? 'Military Base' : hoveredEntity.id.split('-')[0]}
         </div>
       </div>
     </div>
