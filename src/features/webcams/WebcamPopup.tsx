@@ -23,7 +23,7 @@ export function WebcamPopup() {
   const color = HOTSPOT_COLORS[cam.hotspotType] ?? '#888'
 
   return (
-    <div className="fixed top-12 right-4 z-50 w-[360px] bg-[#0a0a0a]/95 backdrop-blur-md border border-[#222] rounded-xl overflow-hidden shadow-2xl">
+    <div className="fixed bottom-28 right-4 z-50 w-[360px] bg-[#0a0a0a]/95 backdrop-blur-md border border-[#222] rounded-xl overflow-hidden shadow-2xl">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#222]">
         <div>

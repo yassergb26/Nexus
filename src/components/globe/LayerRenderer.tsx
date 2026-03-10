@@ -34,7 +34,6 @@ function useEntityInteraction() {
         const entityId = picked.id.id
         if (entityId.startsWith('cctv-') || entityId.startsWith('webcam-')) {
           setSelectedEntityId(entityId)
-          openPanel(entityId)
           return
         }
         openPanel(entityId)
