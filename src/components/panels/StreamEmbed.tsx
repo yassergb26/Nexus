@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { VideoOff, ExternalLink, SkipForward } from 'lucide-react'
+import { VideoOff, ExternalLink, SkipForward, RotateCcw } from 'lucide-react'
 
 interface StreamEmbedProps {
   url: string
@@ -33,7 +33,15 @@ function StreamEmbedInner({ url, fallbackUrls = [], title }: StreamEmbedProps) {
     }
   }, [urlIndex, allUrls.length])
 
-  // Timeout: clear loading state after 10s even if no onLoad fires
+  const retry = useCallback(() => {
+    setUrlIndex(0)
+    setAllFailed(false)
+    setLoading(true)
+  }, [])
+
+  // Timeout: clear loading after 8s. YouTube iframes don't fire onError for
+  // content failures (removed video, region block), so this is the primary
+  // mechanism to detect silent failures.
   useEffect(() => {
     if (allFailed) return
 
@@ -41,7 +49,7 @@ function StreamEmbedInner({ url, fallbackUrls = [], title }: StreamEmbedProps) {
 
     timeoutRef.current = setTimeout(() => {
       setLoading(false)
-    }, 10000)
+    }, 8000)
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -58,14 +66,22 @@ function StreamEmbedInner({ url, fallbackUrls = [], title }: StreamEmbedProps) {
       <div className="aspect-video bg-[#111] rounded flex flex-col items-center justify-center gap-2">
         <VideoOff size={20} className="text-[#333]" />
         <span className="text-[8px] font-mono text-[#444]">All streams unavailable</span>
-        <a
-          href={ytUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-[8px] font-mono text-[#00d4aa] hover:underline"
-        >
-          <ExternalLink size={10} /> Open in YouTube
-        </a>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={retry}
+            className="flex items-center gap-1 text-[8px] font-mono text-[#00d4aa] hover:underline"
+          >
+            <RotateCcw size={10} /> Retry
+          </button>
+          <a
+            href={ytUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-[8px] font-mono text-[#00d4aa] hover:underline"
+          >
+            <ExternalLink size={10} /> YouTube
+          </a>
+        </div>
       </div>
     )
   }
@@ -87,15 +103,20 @@ function StreamEmbedInner({ url, fallbackUrls = [], title }: StreamEmbedProps) {
           <div className="w-4 h-4 border-2 border-[#00d4aa]/30 border-t-[#00d4aa] rounded-full animate-spin" />
         </div>
       )}
-      {/* Manual skip button — lets user cycle to next stream */}
+      {/* Stream index + skip controls */}
       {allUrls.length > 1 && (
-        <button
-          onClick={tryNextFallback}
-          className="absolute top-1 right-1 p-1 bg-[#0a0a0a]/80 rounded hover:bg-[#1a1a1a] transition-colors"
-          title="Try next stream"
-        >
-          <SkipForward size={10} className="text-[#555]" />
-        </button>
+        <div className="absolute top-1 right-1 flex items-center gap-1">
+          <span className="text-[8px] font-mono text-[#555] bg-[#0a0a0a]/80 px-1.5 py-0.5 rounded">
+            {urlIndex + 1}/{allUrls.length}
+          </span>
+          <button
+            onClick={tryNextFallback}
+            className="p-1 bg-[#0a0a0a]/80 rounded hover:bg-[#1a1a1a] transition-colors"
+            title="Try next stream"
+          >
+            <SkipForward size={10} className="text-[#555]" />
+          </button>
+        </div>
       )}
     </div>
   )

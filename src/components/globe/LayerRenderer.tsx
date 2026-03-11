@@ -8,8 +8,6 @@ import { useCctvMeshLines } from '../../features/cctv/useCctvMeshLines'
 import { useMilitaryBasesLayer } from '../../features/bases/useMilitaryBasesLayer'
 import { useVisualMode } from '../../hooks/useVisualMode'
 import { BroadcastPanel } from '../../features/broadcasts/BroadcastPanel'
-import { CctvPopup } from '../../features/cctv/CctvPopup'
-import { WebcamPopup } from '../../features/webcams/WebcamPopup'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
 import EntityTooltip from './EntityTooltip'
@@ -17,7 +15,6 @@ import EntityDetailPanels from '../panels/EntityDetailPanel'
 
 function useEntityInteraction() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
-  const setSelectedEntityId = useMapStore((s) => s.setSelectedEntityId)
   const setHoveredEntity = useMapStore((s) => s.setHoveredEntity)
   const openPanel = useMapStore((s) => s.openPanel)
 
@@ -27,19 +24,13 @@ function useEntityInteraction() {
 
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas)
 
-    // Click handler — open detail panel or CCTV/Webcam popup
+    // Click handler — all entities open via stackable panel system
     handler.setInputAction((click: { position: Cartesian2 }) => {
       const picked = viewer.scene.pick(click.position)
       if (picked?.id instanceof Entity && typeof picked.id.id === 'string') {
-        const entityId = picked.id.id
-        if (entityId.startsWith('cctv-') || entityId.startsWith('webcam-')) {
-          setSelectedEntityId(entityId)
-          return
-        }
-        openPanel(entityId)
+        openPanel(picked.id.id)
         return
       }
-      setSelectedEntityId(null)
     }, ScreenSpaceEventType.LEFT_CLICK)
 
     // Hover handler — show tooltip
@@ -64,7 +55,7 @@ function useEntityInteraction() {
       handler.destroy()
       setHoveredEntity(null)
     }
-  }, [viewerRef, viewerReady, setSelectedEntityId, setHoveredEntity, openPanel])
+  }, [viewerRef, viewerReady, setHoveredEntity, openPanel])
 }
 
 export default function LayerRenderer() {
@@ -80,8 +71,6 @@ export default function LayerRenderer() {
   return (
     <>
       <BroadcastPanel />
-      <CctvPopup />
-      <WebcamPopup />
       <EntityTooltip />
       <EntityDetailPanels />
     </>

@@ -227,11 +227,12 @@ export default function GlobeViewer() {
     // ── Dark sphere behind 3D Tiles to prevent horizon clipping ──────────
     // With globe: false, there's no sphere behind Google 3D Tiles.
     // At the horizon, gaps between tiles show empty space.
-    // This adds a dark ellipsoid at Earth's radius to fill those gaps.
+    // Radii at 99% of Earth's WGS84 values to sit behind tiles and avoid z-fighting.
+    const scale = 0.99
     const darkGlobe = new Primitive({
       geometryInstances: new GeometryInstance({
         geometry: new EllipsoidGeometry({
-          radii: new Cartesian3(6378137.0, 6378137.0, 6356752.3),
+          radii: new Cartesian3(6378137.0 * scale, 6378137.0 * scale, 6356752.3 * scale),
         }),
       }),
       appearance: new EllipsoidSurfaceAppearance({
@@ -245,49 +246,50 @@ export default function GlobeViewer() {
     viewer.scene.primitives.add(darkGlobe)
 
     // ── Google Photorealistic 3D Tiles ───────────────────────────────────
-    createGooglePhotorealistic3DTileset()
-      .then((tileset) => {
-        // Core quality: lower SSE = sharper buildings, more tiles loaded
-        tileset.maximumScreenSpaceError = q.sse
+    // Track whether this effect instance was cleaned up (React StrictMode
+    // double-mounts in dev). If destroyed, skip adding tiles to the viewer.
+    let destroyed = false
 
-        // IMPORTANT: skipLevelOfDetail must be FALSE for sharp buildings.
-        // When true, low-res ancestor tiles bleed through while children
-        // load, causing blurry/popping artifacts (CesiumGS/cesium#7903).
-        // Cesium changed default to false in v1.67 for this reason.
-        tileset.skipLevelOfDetail = false
+    const configureTileset = (tileset: Cesium3DTileset) => {
+      tileset.maximumScreenSpaceError = q.sse
+      tileset.skipLevelOfDetail = false
+      tileset.dynamicScreenSpaceError = q.dynamicSSE
+      tileset.dynamicScreenSpaceErrorDensity = 0.0018
+      tileset.dynamicScreenSpaceErrorFactor = 2.0
+      tileset.dynamicScreenSpaceErrorHeightFalloff = 0.25
+      tileset.foveatedScreenSpaceError = q.foveatedEnabled
+      tileset.foveatedConeSize = q.foveatedConeSize
+      tileset.foveatedMinimumScreenSpaceErrorRelaxation = 0.0
+      tileset.foveatedTimeDelay = 0.1
+      tileset.preferLeaves = false
+      tileset.loadSiblings = true
+      tileset.preloadFlightDestinations = q.preloadFlyTo
+      tileset.progressiveResolutionHeightFraction = 0.0
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(tileset as any).cacheBytes = q.tileMemoryMB * 1024 * 1024
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(tileset as any).maximumCacheOverflowBytes = q.tileOverflowMB * 1024 * 1024
+    }
 
-        // Dynamic SSE: slightly reduce quality only for far-horizon tiles
-        tileset.dynamicScreenSpaceError = q.dynamicSSE
-        tileset.dynamicScreenSpaceErrorDensity = 0.0018
-        tileset.dynamicScreenSpaceErrorFactor = 2.0
-        tileset.dynamicScreenSpaceErrorHeightFalloff = 0.25
-
-        // Foveated rendering: prioritize center-screen loading order,
-        // but keep relaxation at 0 so edge tiles still reach full quality
-        tileset.foveatedScreenSpaceError = q.foveatedEnabled
-        tileset.foveatedConeSize = q.foveatedConeSize
-        tileset.foveatedMinimumScreenSpaceErrorRelaxation = 0.0
-        tileset.foveatedTimeDelay = 0.1
-
-        // Loading strategy
-        tileset.preferLeaves = false
-        tileset.loadSiblings = true
-        tileset.preloadFlightDestinations = q.preloadFlyTo
-        // 0 = always show full-res immediately, no low-res placeholders
-        tileset.progressiveResolutionHeightFraction = 0.0
-
-        // Memory budget — generous to avoid evicting sharp tiles
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(tileset as any).cacheBytes = q.tileMemoryMB * 1024 * 1024
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(tileset as any).maximumCacheOverflowBytes = q.tileOverflowMB * 1024 * 1024
-
-        viewer.scene.primitives.add(tileset)
-        tilesetRef.current = tileset
-      })
-      .catch((err) => {
-        console.warn('Google 3D Tiles not available:', err.message)
-      })
+    const loadTiles = (attempt = 0) => {
+      createGooglePhotorealistic3DTileset()
+        .then((tileset) => {
+          if (destroyed || viewer.isDestroyed()) return
+          configureTileset(tileset)
+          viewer.scene.primitives.add(tileset)
+          tilesetRef.current = tileset
+        })
+        .catch((err) => {
+          // "Resource is already being fetched" happens in React StrictMode dev
+          // double-mount — retry once after a short delay
+          if (attempt === 0 && err.message?.includes('already being fetched')) {
+            setTimeout(() => { if (!destroyed) loadTiles(1) }, 500)
+          } else {
+            console.warn('Google 3D Tiles not available:', err.message)
+          }
+        })
+    }
+    loadTiles()
 
     // Pin clock to solar noon
     const initNoon = new Date()
@@ -365,6 +367,7 @@ export default function GlobeViewer() {
     setViewerReady(true)
 
     return () => {
+      destroyed = true
       handler.destroy()
       setViewerReady(false)
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {

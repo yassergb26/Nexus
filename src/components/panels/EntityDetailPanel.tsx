@@ -1,4 +1,5 @@
-import { X } from 'lucide-react'
+import { X, GripVertical } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useMapStore } from '../../store/useMapStore'
 import { CCTV_CAMERAS } from '../../data/cctv-cameras'
 import { WEBCAM_FEEDS } from '../../data/webcam-feeds'
@@ -9,20 +10,32 @@ function PanelCard({ id, title, children }: { id: string; title: string; childre
   const closePanel = useMapStore((s) => s.closePanel)
 
   return (
-    <div className="bg-[#0a0a0a]/95 backdrop-blur-sm border border-[#222] rounded overflow-hidden w-[280px]">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#222]">
-        <span className="text-[9px] font-mono tracking-[0.15em] text-[#00d4aa] uppercase">
-          {title}
-        </span>
+    <motion.div
+      drag
+      dragMomentum={false}
+      dragConstraints={{ top: -500, left: -800, right: 200, bottom: 200 }}
+      dragElastic={0.05}
+      className="bg-[#0a0a0a]/95 backdrop-blur-sm border border-[#222] rounded overflow-hidden w-[280px] cursor-default shadow-xl"
+      whileDrag={{ scale: 1.02, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+    >
+      {/* Drag handle + header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[#222] cursor-grab active:cursor-grabbing">
+        <div className="flex items-center gap-1.5">
+          <GripVertical size={10} className="text-[#333]" />
+          <span className="text-[9px] font-mono tracking-[0.15em] text-[#00d4aa] uppercase">
+            {title}
+          </span>
+        </div>
         <button
           onClick={() => closePanel(id)}
+          onPointerDown={(e) => e.stopPropagation()}
           className="text-[#555] hover:text-[#e0e0e0] transition-colors"
         >
           <X size={12} />
         </button>
       </div>
       <div className="p-3">{children}</div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -89,7 +102,6 @@ function BaseDetail({ id }: { id: string }) {
 }
 
 function EarthquakeDetail({ id }: { id: string }) {
-  // id format: "eq-us7000xxxx"
   const eqId = id.replace('eq-', '')
   return (
     <PanelCard id={id} title="EARTHQUAKE">
