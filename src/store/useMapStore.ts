@@ -25,6 +25,7 @@ interface MapState {
   circularViewport: boolean
   hoveredEntity: { id: string; screenX: number; screenY: number; name: string } | null
   openPanels: string[]
+  cctvMeshVisible: boolean
 
   setPosition: (position: Partial<MapPosition>) => void
   setVisualMode: (mode: VisualMode) => void
@@ -52,6 +53,7 @@ interface MapState {
   setHoveredEntity: (entity: { id: string; screenX: number; screenY: number; name: string } | null) => void
   openPanel: (id: string) => void
   closePanel: (id: string) => void
+  toggleCctvMesh: () => void
 }
 
 export const useMapStore = create<MapState>((set, get) => ({
@@ -66,7 +68,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   layers: DEFAULT_LAYERS,
   activePreset: 'global',
   sidebarOpen: true,
-  hudVisible: false,
+  hudVisible: true,
   fps: 60,
   selectedEntityId: null,
 
@@ -116,6 +118,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   circularViewport: false,
   hoveredEntity: null,
   openPanels: [],
+  cctvMeshVisible: false,
   setTimeRange: (range) => set({ timeRange: range }),
   setPendingFlyTo: (target) => set({ pendingFlyTo: target }),
   togglePerformanceMode: () => set((state) => ({ performanceMode: !state.performanceMode })),
@@ -126,7 +129,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   setActiveLandmark: (id) => set({ activeLandmark: id }),
   setLayoutMode: (mode) => {
     if (mode === 'standard') {
-      set({ layoutMode: mode, hudVisible: false, circularViewport: false, cleanUI: false })
+      set({ layoutMode: mode, hudVisible: true, circularViewport: false, cleanUI: false })
     } else if (mode === 'tactical') {
       set({ layoutMode: mode, hudVisible: true, circularViewport: true, cleanUI: false })
     } else if (mode === 'cinematic') {
@@ -141,18 +144,20 @@ export const useMapStore = create<MapState>((set, get) => ({
     openPanels: [],
     selectedEntityId: null,
     layoutMode: 'standard',
-    hudVisible: false,
+    hudVisible: true,
     circularViewport: false,
     cleanUI: false,
     bloomEnabled: false,
     sharpenAmount: 49,
     visualMode: 'normal',
+    cctvMeshVisible: false,
   }),
   setHoveredEntity: (entity) => set({ hoveredEntity: entity }),
   openPanel: (id) => set((state) => {
     if (state.openPanels.includes(id)) return state
-    const panels = [...state.openPanels, id].slice(-4) // max 4 panels
+    const panels = [...state.openPanels, id]
     return { openPanels: panels }
   }),
   closePanel: (id) => set((state) => ({ openPanels: state.openPanels.filter((p) => p !== id) })),
+  toggleCctvMesh: () => set((state) => ({ cctvMeshVisible: !state.cctvMeshVisible })),
 }))

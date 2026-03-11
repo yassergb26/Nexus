@@ -22,7 +22,7 @@ describe('HudOverlay', () => {
 
   it('renders branding banner', () => {
     render(<HudOverlay />)
-    expect(screen.getByText('UPPER LEDGER TERMINAL')).toBeInTheDocument()
+    expect(screen.getByText('ALPHA LEDGER TERMINAL')).toBeInTheDocument()
   })
 
   it('displays the visual mode name', () => {

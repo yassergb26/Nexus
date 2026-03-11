@@ -30,11 +30,8 @@ const SATELLITE_LEGEND: LegendItem[] = [
   { color: '#8b5cf6', label: 'Orbital station' },
 ]
 
-const CCTV_LEGEND: LegendItem[] = [
+const CAMERA_LEGEND: LegendItem[] = [
   { color: '#10b981', label: 'CCTV camera' },
-]
-
-const WEBCAM_LEGEND: LegendItem[] = [
   { color: '#ef4444', label: 'Conflict zone' },
   { color: '#f97316', label: 'Border region' },
   { color: '#3b82f6', label: 'Maritime chokepoint' },
@@ -75,11 +72,11 @@ export default function LayerLegend() {
   if (cleanUI) return null
 
   const isEnabled = (id: string) => layers.find((l) => l.id === id)?.enabled ?? false
-  const anyEnabled = ['flights', 'bases', 'earthquakes', 'satellites', 'cctv', 'webcams'].some(isEnabled)
+  const anyEnabled = ['flights', 'bases', 'earthquakes', 'satellites', 'cctv'].some(isEnabled)
 
   return (
-    <div className="fixed bottom-8 left-4 z-30 pointer-events-auto">
-      <div className="bg-[#0a0a0a]/95 backdrop-blur-sm border border-[#222] rounded p-3 min-w-[140px] max-h-[300px] overflow-y-auto">
+    <div className="fixed bottom-20 left-4 z-30 pointer-events-auto">
+      <div className="bg-[#0a0a0a]/95 backdrop-blur-sm border border-[#222] rounded p-3 min-w-[140px]">
         <div className="text-[8px] font-mono tracking-[0.15em] text-[#555] uppercase mb-2">
           LEGEND
         </div>
@@ -89,8 +86,7 @@ export default function LayerLegend() {
             <LegendSection title="Military Bases" items={BASE_LEGEND} enabled={isEnabled('bases')} />
             <LegendSection title="Earthquakes" items={EARTHQUAKE_LEGEND} enabled={isEnabled('earthquakes')} />
             <LegendSection title="Satellites" items={SATELLITE_LEGEND} enabled={isEnabled('satellites')} />
-            <LegendSection title="CCTV" items={CCTV_LEGEND} enabled={isEnabled('cctv')} />
-            <LegendSection title="Webcams" items={WEBCAM_LEGEND} enabled={isEnabled('webcams')} />
+            <LegendSection title="Live Cameras" items={CAMERA_LEGEND} enabled={isEnabled('cctv')} />
           </>
         ) : (
           <div className="text-[9px] font-mono text-[#333]">No layers active</div>

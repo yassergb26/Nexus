@@ -1,11 +1,20 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { CustomDataSource, Cartesian3, NearFarScalar } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
 import { CCTV_CAMERAS } from '../../data/cctv-cameras'
+import { WEBCAM_FEEDS } from '../../data/webcam-feeds'
 import { cameraIcon } from '../../utils/iconBuilder'
 
 const CCTV_ICON = cameraIcon('#10b981')
+
+const HOTSPOT_COLORS: Record<string, string> = {
+  conflict:  '#ef4444',
+  border:    '#f97316',
+  maritime:  '#3b82f6',
+  political: '#a855f7',
+  strategic: '#eab308',
+}
 
 export function useCctvLayer() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
@@ -13,6 +22,14 @@ export function useCctvLayer() {
   const setLayerCount = useMapStore((s) => s.setLayerCount)
   const setSelectedEntityId = useMapStore((s) => s.setSelectedEntityId)
   const dataSourceRef = useRef<CustomDataSource | null>(null)
+
+  const webcamIconCache = useMemo(() => {
+    const cache: Record<string, string> = {}
+    for (const [type, color] of Object.entries(HOTSPOT_COLORS)) {
+      cache[type] = cameraIcon(color)
+    }
+    return cache
+  }, [])
 
   useEffect(() => {
     const viewer = viewerRef.current
@@ -40,6 +57,7 @@ export function useCctvLayer() {
       return
     }
 
+    // Add CCTV cameras
     for (const cam of CCTV_CAMERAS) {
       ds.entities.add({
         id: `cctv-${cam.id}`,
@@ -55,6 +73,25 @@ export function useCctvLayer() {
         description: cam.name as unknown as any,
       })
     }
-    setLayerCount('cctv', CCTV_CAMERAS.length)
-  }, [isEnabled, setLayerCount, setSelectedEntityId])
+
+    // Add webcam feeds (merged into same layer)
+    for (const cam of WEBCAM_FEEDS) {
+      const icon = webcamIconCache[cam.hotspotType] ?? cameraIcon('#888')
+      ds.entities.add({
+        id: `webcam-${cam.id}`,
+        name: cam.name,
+        position: Cartesian3.fromDegrees(cam.longitude, cam.latitude, 0),
+        billboard: {
+          image: icon,
+          width: 24,
+          height: 24,
+          scaleByDistance: new NearFarScalar(1e4, 1.8, 1e7, 0.4),
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        description: cam.description as unknown as any,
+      })
+    }
+
+    setLayerCount('cctv', CCTV_CAMERAS.length + WEBCAM_FEEDS.length)
+  }, [isEnabled, setLayerCount, setSelectedEntityId, webcamIconCache])
 }

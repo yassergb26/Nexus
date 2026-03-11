@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { WEBCAM_FEEDS } from '../../data/webcam-feeds'
 import { useMapStore } from '../../store/useMapStore'
+import StreamEmbed from '../../components/panels/StreamEmbed'
 
 const HOTSPOT_COLORS: Record<string, string> = {
   conflict:  '#ef4444',
@@ -45,16 +46,7 @@ export function WebcamPopup() {
       </div>
 
       {/* Video */}
-      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-        <iframe
-          src={cam.streamUrl}
-          className="absolute inset-0 w-full h-full"
-          allow="autoplay; fullscreen"
-          allowFullScreen
-          frameBorder="0"
-          title={cam.name}
-        />
-      </div>
+      <StreamEmbed url={cam.streamUrl} fallbackUrls={cam.fallbackUrls} title={cam.name} />
 
       <div className="px-4 py-2 text-[10px] text-[#555]">{cam.description}</div>
     </div>

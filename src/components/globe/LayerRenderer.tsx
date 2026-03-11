@@ -4,7 +4,7 @@ import { useEarthquakesLayer } from '../../features/earthquakes/useEarthquakesLa
 import { useFlightsLayer } from '../../features/flights/useFlightsLayer'
 import { useSatellitesLayer } from '../../features/satellites/useSatellitesLayer'
 import { useCctvLayer } from '../../features/cctv/useCctvLayer'
-import { useWebcamsLayer } from '../../features/webcams/useWebcamsLayer'
+import { useCctvMeshLines } from '../../features/cctv/useCctvMeshLines'
 import { useMilitaryBasesLayer } from '../../features/bases/useMilitaryBasesLayer'
 import { useVisualMode } from '../../hooks/useVisualMode'
 import { BroadcastPanel } from '../../features/broadcasts/BroadcastPanel'
@@ -72,7 +72,7 @@ export default function LayerRenderer() {
   useFlightsLayer()
   useSatellitesLayer()
   useCctvLayer()
-  useWebcamsLayer()
+  useCctvMeshLines()
   useMilitaryBasesLayer()
   useVisualMode()
   useEntityInteraction()

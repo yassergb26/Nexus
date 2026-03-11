@@ -13,6 +13,11 @@ import {
   Ion,
   JulianDate,
   DirectionalLight,
+  EllipsoidSurfaceAppearance,
+  Material,
+  Primitive,
+  GeometryInstance,
+  EllipsoidGeometry,
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { useMapStore } from '../../store/useMapStore'
@@ -218,6 +223,26 @@ export default function GlobeViewer() {
 
     viewer.scene.postProcessStages.bloom.enabled = false
     viewer.scene.postProcessStages.fxaa.enabled = q.fxaa
+
+    // ── Dark sphere behind 3D Tiles to prevent horizon clipping ──────────
+    // With globe: false, there's no sphere behind Google 3D Tiles.
+    // At the horizon, gaps between tiles show empty space.
+    // This adds a dark ellipsoid at Earth's radius to fill those gaps.
+    const darkGlobe = new Primitive({
+      geometryInstances: new GeometryInstance({
+        geometry: new EllipsoidGeometry({
+          radii: new Cartesian3(6378137.0, 6378137.0, 6356752.3),
+        }),
+      }),
+      appearance: new EllipsoidSurfaceAppearance({
+        material: Material.fromType('Color', {
+          color: new Color(0.02, 0.02, 0.04, 1.0),
+        }),
+        aboveGround: false,
+      }),
+      asynchronous: false,
+    })
+    viewer.scene.primitives.add(darkGlobe)
 
     // ── Google Photorealistic 3D Tiles ───────────────────────────────────
     createGooglePhotorealistic3DTileset()

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Minus, Plane, Satellite, Activity, Camera, Car, CloudLightning, Shield } from 'lucide-react'
+import { Plus, Minus, Plane, Satellite, Activity, Camera, CloudLightning, Shield } from 'lucide-react'
 import { useMapStore } from '../../store/useMapStore'
 
 /** Source labels for display under layer names */
@@ -9,8 +9,7 @@ const LAYER_SOURCES: Record<string, string> = {
   earthquakes: 'USGS',
   satellites:  'CelesTrak',
   weather:     'NOAA NEXRAD (globe overlay)',
-  cctv:        'CCTV Mesh + Street View fallback',
-  webcams:     'GBFS',
+  cctv:        'CCTV + Hotspot webcams',
 }
 
 /** Icon mapping for the data layers list */
@@ -21,7 +20,6 @@ const LAYER_ICONS: Record<string, React.ReactNode> = {
   satellites:  <Satellite size={14} className="text-[#8b5cf6]" />,
   weather:     <CloudLightning size={14} className="text-[#64748b]" />,
   cctv:        <Camera size={14} className="text-[#10b981]" />,
-  webcams:     <Car size={14} className="text-[#14b8a6]" />,
 }
 
 /** Primary layers shown in the DATA LAYERS panel (matching WorldView) */
@@ -32,7 +30,6 @@ const PRIMARY_LAYER_IDS = [
   'satellites',
   'weather',
   'cctv',
-  'webcams',
 ]
 
 interface CollapsiblePanelProps {
@@ -99,12 +96,13 @@ function OnOffToggle({ enabled, onClick }: { enabled: boolean; onClick: () => vo
 }
 
 export default function Sidebar() {
-  const { layers, toggleLayer, cleanUI } = useMapStore()
+  const { layers, toggleLayer, cleanUI, cctvMeshVisible, toggleCctvMesh } = useMapStore()
 
   if (cleanUI) return null
 
   const getLayer = (id: string) => layers.find((l) => l.id === id)
   const enabledCount = layers.filter((l) => l.enabled).length
+  const cctvEnabled = getLayer('cctv')?.enabled ?? false
 
   return (
     <div className="fixed top-28 left-5 z-30 flex flex-col gap-3 w-[240px] pointer-events-none">
@@ -114,12 +112,19 @@ export default function Sidebar() {
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-[#888] font-mono">Camera feeds</span>
             <OnOffToggle
-              enabled={getLayer('cctv')?.enabled ?? false}
+              enabled={cctvEnabled}
               onClick={() => toggleLayer('cctv')}
             />
           </div>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-[10px] text-[#888] font-mono">Mesh lines</span>
+            <OnOffToggle
+              enabled={cctvMeshVisible}
+              onClick={toggleCctvMesh}
+            />
+          </div>
           <div className="mt-2 text-[9px] text-[#444] font-mono">
-            CCTV Mesh + Street View fallback
+            {cctvMeshVisible ? 'Showing connection lines between cameras' : 'Toggle mesh to show camera network'}
           </div>
         </div>
       </CollapsiblePanel>

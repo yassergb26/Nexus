@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { CCTV_CAMERAS } from '../../data/cctv-cameras'
 import { useMapStore } from '../../store/useMapStore'
+import StreamEmbed from '../../components/panels/StreamEmbed'
 
 export function CctvPopup() {
   const selectedEntityId = useMapStore((s) => s.selectedEntityId)
@@ -33,16 +34,7 @@ export function CctvPopup() {
       </div>
 
       {/* Video */}
-      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-        <iframe
-          src={cam.streamUrl}
-          className="absolute inset-0 w-full h-full"
-          allow="autoplay; fullscreen"
-          allowFullScreen
-          frameBorder="0"
-          title={cam.name}
-        />
-      </div>
+      <StreamEmbed url={cam.streamUrl} fallbackUrls={cam.fallbackUrls} title={cam.name} />
 
       <div className="px-4 py-2 text-[10px] text-[#555] uppercase tracking-wider">
         {cam.category} · Live Feed

@@ -164,7 +164,7 @@ export const DEFAULT_LAYERS: MapLayer[] = [
   // Live Feeds
   {
     id: 'cctv',
-    name: 'CCTV Cameras',
+    name: 'Live Cameras',
     category: 'live',
     icon: 'Camera',
     enabled: false,
