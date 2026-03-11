@@ -68,6 +68,7 @@ function LegendSection({ title, items, enabled }: LegendSectionProps) {
 export default function LayerLegend() {
   const layers = useMapStore((s) => s.layers)
   const cleanUI = useMapStore((s) => s.cleanUI)
+  const sidebarOpen = useMapStore((s) => s.sidebarOpen)
 
   if (cleanUI) return null
 
@@ -75,7 +76,10 @@ export default function LayerLegend() {
   const anyEnabled = ['flights', 'bases', 'earthquakes', 'satellites', 'cctv'].some(isEnabled)
 
   return (
-    <div className="fixed bottom-20 left-4 z-30 pointer-events-auto">
+    <div
+      className="fixed bottom-20 z-30 pointer-events-auto transition-[left] duration-200"
+      style={{ left: sidebarOpen ? 270 : 16 }}
+    >
       <div className="bg-[#0a0a0a]/95 backdrop-blur-sm border border-[#222] rounded p-3 min-w-[140px]">
         <div className="text-[8px] font-mono tracking-[0.15em] text-[#555] uppercase mb-2">
           LEGEND
