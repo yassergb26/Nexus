@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useMapStore } from '../../store/useMapStore'
 
 interface LegendItem {
@@ -68,7 +69,7 @@ function LegendSection({ title, items, enabled }: LegendSectionProps) {
 export default function LayerLegend() {
   const layers = useMapStore((s) => s.layers)
   const cleanUI = useMapStore((s) => s.cleanUI)
-  const sidebarOpen = useMapStore((s) => s.sidebarOpen)
+  const [collapsed, setCollapsed] = useState(false)
 
   if (cleanUI) return null
 
@@ -76,24 +77,29 @@ export default function LayerLegend() {
   const anyEnabled = ['flights', 'bases', 'earthquakes', 'satellites', 'cctv'].some(isEnabled)
 
   return (
-    <div
-      className="fixed bottom-20 z-30 pointer-events-auto transition-[left] duration-200"
-      style={{ left: sidebarOpen ? 270 : 16 }}
-    >
+    <div className="fixed bottom-20 left-4 z-30 pointer-events-auto">
       <div className="bg-[#0a0a0a]/95 backdrop-blur-sm border border-[#222] rounded p-3 min-w-[140px]">
-        <div className="text-[8px] font-mono tracking-[0.15em] text-[#555] uppercase mb-2">
-          LEGEND
-        </div>
-        {anyEnabled ? (
-          <>
-            <LegendSection title="Flights" items={FLIGHT_LEGEND} enabled={isEnabled('flights')} />
-            <LegendSection title="Military Bases" items={BASE_LEGEND} enabled={isEnabled('bases')} />
-            <LegendSection title="Earthquakes" items={EARTHQUAKE_LEGEND} enabled={isEnabled('earthquakes')} />
-            <LegendSection title="Satellites" items={SATELLITE_LEGEND} enabled={isEnabled('satellites')} />
-            <LegendSection title="Live Cameras" items={CAMERA_LEGEND} enabled={isEnabled('cctv')} />
-          </>
-        ) : (
-          <div className="text-[9px] font-mono text-[#333]">No layers active</div>
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="flex items-center justify-between w-full text-[8px] font-mono tracking-[0.15em] text-[#555] uppercase hover:text-[#888] transition-colors"
+        >
+          <span>LEGEND</span>
+          <span className="text-[10px]">{collapsed ? '+' : '−'}</span>
+        </button>
+        {!collapsed && (
+          <div className="mt-2">
+            {anyEnabled ? (
+              <>
+                <LegendSection title="Flights" items={FLIGHT_LEGEND} enabled={isEnabled('flights')} />
+                <LegendSection title="Military Bases" items={BASE_LEGEND} enabled={isEnabled('bases')} />
+                <LegendSection title="Earthquakes" items={EARTHQUAKE_LEGEND} enabled={isEnabled('earthquakes')} />
+                <LegendSection title="Satellites" items={SATELLITE_LEGEND} enabled={isEnabled('satellites')} />
+                <LegendSection title="Live Cameras" items={CAMERA_LEGEND} enabled={isEnabled('cctv')} />
+              </>
+            ) : (
+              <div className="text-[9px] font-mono text-[#333]">No layers active</div>
+            )}
+          </div>
         )}
       </div>
     </div>
