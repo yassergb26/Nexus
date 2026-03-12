@@ -6,7 +6,7 @@ import {
   ConstantProperty,
   ColorMaterialProperty,
   Rectangle as CesiumRectangle,
-  ClassificationType,
+  DirectionalLight,
 } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
@@ -24,17 +24,12 @@ function getSunPosition(date: Date): { lat: number; lon: number } {
     (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000
   )
   const hours = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600
-
-  // Solar declination (simplified approximation)
   const declination = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10))
-
-  // Sub-solar longitude from hour angle
   const lon = normalizeLon(-(hours - 12) * 15)
-
   return { lat: declination, lon }
 }
 
-/** Generate terminator great circle points (boundary where solar elevation = 0) */
+/** Generate terminator great circle points */
 function getTerminatorPoints(sunLat: number, sunLon: number, segments = 72): { lat: number; lon: number }[] {
   const sunLatRad = (sunLat * Math.PI) / 180
   const sunLonRad = (sunLon * Math.PI) / 180
@@ -42,7 +37,6 @@ function getTerminatorPoints(sunLat: number, sunLon: number, segments = 72): { l
 
   for (let i = 0; i <= segments; i++) {
     const angle = (2 * Math.PI * i) / segments
-
     const lat = Math.asin(
       Math.sin(sunLatRad) * Math.cos(Math.PI / 2) +
       Math.cos(sunLatRad) * Math.sin(Math.PI / 2) * Math.cos(angle)
@@ -51,15 +45,33 @@ function getTerminatorPoints(sunLat: number, sunLon: number, segments = 72): { l
       Math.sin(angle) * Math.sin(Math.PI / 2) * Math.cos(sunLatRad),
       Math.cos(Math.PI / 2) - Math.sin(sunLatRad) * Math.sin(lat)
     )
-
     points.push({
       lat: (lat * 180) / Math.PI,
       lon: normalizeLon((lon * 180) / Math.PI),
     })
   }
-
   return points
 }
+
+/**
+ * Compute ECEF unit vector pointing FROM the sun TOWARD earth center.
+ * This is the DirectionalLight direction that darkens the night hemisphere.
+ */
+function getSunLightDirection(sunLat: number, sunLon: number): Cartesian3 {
+  const latRad = (sunLat * Math.PI) / 180
+  const lonRad = (sunLon * Math.PI) / 180
+  // Sun position on unit sphere (ECEF)
+  // Light direction = negate (light travels FROM sun TO earth)
+  return new Cartesian3(
+    -Math.cos(latRad) * Math.cos(lonRad),
+    -Math.cos(latRad) * Math.sin(lonRad),
+    -Math.sin(latRad)
+  )
+}
+
+// Original fixed light used when Day/Night is OFF
+const FIXED_LIGHT_DIR = new Cartesian3(0.35, -0.9, -0.28)
+const FIXED_LIGHT_INTENSITY = 1.8
 
 export function useTerminatorLayer() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
@@ -83,16 +95,25 @@ export function useTerminatorLayer() {
     }
   }, [viewerRef, viewerReady])
 
-  // Rebuild entities when enabled state or map mode changes
   useEffect(() => {
+    const viewer = viewerRef.current
     const ds = dataSourceRef.current
-    if (!ds) return
+    if (!ds || !viewer || viewer.isDestroyed()) return
+
     ds.entities.removeAll()
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
       intervalRef.current = null
     }
-    if (!isEnabled) return
+
+    // Restore fixed light when disabled
+    if (!isEnabled) {
+      viewer.scene.light = new DirectionalLight({
+        direction: FIXED_LIGHT_DIR,
+        intensity: FIXED_LIGHT_INTENSITY,
+      })
+      return
+    }
 
     const is2D = mapMode === '2d'
 
@@ -102,12 +123,22 @@ export function useTerminatorLayer() {
       const sun = getSunPosition(now)
       const terminatorPts = getTerminatorPoints(sun.lat, sun.lon)
 
-      // Night shadow — Rectangle handles antimeridian wrapping natively.
-      const nightWest = normalizeLon(sun.lon + 90)
-      const nightEast = normalizeLon(sun.lon - 90)
+      // ── 3D MODE: Use DirectionalLight from real sun position ──────────
+      // This naturally darkens 3D tiles on the night hemisphere.
+      if (!is2D) {
+        viewer.scene.light = new DirectionalLight({
+          direction: getSunLightDirection(sun.lat, sun.lon),
+          intensity: 2.0,
+        })
+      } else {
+        // 2D: lighting doesn't affect the flat map, use Rectangle shadow
+        viewer.scene.light = new DirectionalLight({
+          direction: FIXED_LIGHT_DIR,
+          intensity: FIXED_LIGHT_INTENSITY,
+        })
 
-      if (is2D) {
-        // 2D: render on globe surface with explicit height
+        const nightWest = normalizeLon(sun.lon + 90)
+        const nightEast = normalizeLon(sun.lon - 90)
         ds.entities.add({
           id: 'night-shadow',
           name: 'Night Hemisphere',
@@ -119,28 +150,14 @@ export function useTerminatorLayer() {
             height: new ConstantProperty(0),
           },
         })
-      } else {
-        // 3D: drape on Google Photorealistic 3D Tiles via classification
-        ds.entities.add({
-          id: 'night-shadow',
-          name: 'Night Hemisphere',
-          rectangle: {
-            coordinates: new ConstantProperty(
-              CesiumRectangle.fromDegrees(nightWest, -90, nightEast, 90)
-            ),
-            material: new ColorMaterialProperty(Color.BLACK.withAlpha(0.35)),
-            classificationType: new ConstantProperty(ClassificationType.CESIUM_3D_TILE),
-          },
-        })
       }
 
-      // Terminator line
+      // ── Terminator line (both modes) ──────────────────────────────────
       const linePositions = terminatorPts.map((p) =>
         Cartesian3.fromDegrees(p.lon, p.lat, 0)
       )
 
       if (is2D) {
-        // 2D: regular polylines at height 0
         ds.entities.add({
           id: 'terminator-line',
           name: 'Day/Night Terminator',
@@ -160,7 +177,6 @@ export function useTerminatorLayer() {
           },
         })
       } else {
-        // 3D: clampToGround so line drapes on 3D tiles
         ds.entities.add({
           id: 'terminator-line',
           name: 'Day/Night Terminator',
@@ -186,5 +202,19 @@ export function useTerminatorLayer() {
 
     updateTerminator()
     intervalRef.current = setInterval(updateTerminator, 60000)
-  }, [isEnabled, mapMode])
+
+    // Cleanup: restore fixed light on unmount
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      if (viewer && !viewer.isDestroyed()) {
+        viewer.scene.light = new DirectionalLight({
+          direction: FIXED_LIGHT_DIR,
+          intensity: FIXED_LIGHT_INTENSITY,
+        })
+      }
+    }
+  }, [isEnabled, mapMode, viewerRef])
 }
