@@ -76,14 +76,13 @@ interface GeoFeature {
   }
 }
 
-const CONTINENT_COLOR = Color.WHITE
-const COUNTRY_COLOR = Color.fromCssColorString('#e0e0e0')
+const LABEL_WHITE = Color.WHITE
 const OUTLINE_COLOR = Color.fromCssColorString('#000000')
 
 /**
  * Map labels in English — only visible in 2D mode.
- * Continents: visible when zoomed out.
- * Countries: visible when zoomed in, loaded from GeoJSON label positions.
+ * Continents: visible when zoomed out, fade away when zoomed in.
+ * Countries: ALL 242 labeled, always visible, bold white.
  */
 export function useContinentLabels() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
@@ -105,32 +104,32 @@ export function useContinentLabels() {
 
     const ds = new CustomDataSource('map-labels')
 
-    // ── Continent labels (visible when zoomed out) ──
+    // ── Continent labels (visible only when very zoomed out) ──
     for (const c of CONTINENTS) {
       ds.entities.add({
         id: `continent-${c.name}`,
         position: Cartesian3.fromDegrees(c.lon, c.lat, 0),
         label: {
           text: new ConstantProperty(c.name.toUpperCase()),
-          font: new ConstantProperty('bold 18px Inter, system-ui, sans-serif'),
-          fillColor: new ConstantProperty(CONTINENT_COLOR),
+          font: new ConstantProperty('bold 20px Inter, system-ui, sans-serif'),
+          fillColor: new ConstantProperty(LABEL_WHITE),
           outlineColor: new ConstantProperty(OUTLINE_COLOR),
-          outlineWidth: new ConstantProperty(3),
+          outlineWidth: new ConstantProperty(4),
           style: new ConstantProperty(LabelStyle.FILL_AND_OUTLINE),
           verticalOrigin: new ConstantProperty(VerticalOrigin.CENTER),
-          // Show when far, hide when close
           scaleByDistance: new ConstantProperty(
-            new NearFarScalar(5e6, 0.9, 3e7, 0.5)
+            new NearFarScalar(8e6, 0.8, 4e7, 0.5)
           ),
+          // Fade OUT when zoomed in below 8M, fully visible above 15M
           translucencyByDistance: new ConstantProperty(
-            new NearFarScalar(2e6, 0.0, 8e6, 1.0)
+            new NearFarScalar(8e6, 0.0, 1.5e7, 1.0)
           ),
           disableDepthTestDistance: new ConstantProperty(Number.POSITIVE_INFINITY),
         },
       })
     }
 
-    // ── Country labels (visible when zoomed in) ──
+    // ── Country labels (ALL countries, always visible when zoomed in) ──
     fetch('/data/countries-50m.geojson')
       .then((r) => r.json())
       .then((geojson: { features: GeoFeature[] }) => {
@@ -145,28 +144,28 @@ export function useContinentLabels() {
 
           const displayName = ENGLISH_LABEL[NAME] || NAME
 
-          // Larger countries (lower LABELRANK) are visible from further away
-          const farDist = LABELRANK <= 2 ? 1.2e7 : LABELRANK <= 4 ? 8e6 : 5e6
-          const nearDist = LABELRANK <= 2 ? 8e5 : LABELRANK <= 4 ? 5e5 : 3e5
-          const fontSize = LABELRANK <= 2 ? 15 : LABELRANK <= 4 ? 13 : 11
+          // All countries use the same large visibility range
+          // Bigger countries (low LABELRANK) get slightly bigger text
+          const fontSize = LABELRANK <= 2 ? 16 : LABELRANK <= 4 ? 14 : 12
 
           ds.entities.add({
             id: `country-label-${NAME}`,
             position: Cartesian3.fromDegrees(LABEL_X, LABEL_Y, 0),
             label: {
               text: new ConstantProperty(displayName),
-              font: new ConstantProperty(`${fontSize}px Inter, system-ui, sans-serif`),
-              fillColor: new ConstantProperty(COUNTRY_COLOR),
+              font: new ConstantProperty(`bold ${fontSize}px Inter, system-ui, sans-serif`),
+              fillColor: new ConstantProperty(LABEL_WHITE),
               outlineColor: new ConstantProperty(OUTLINE_COLOR),
-              outlineWidth: new ConstantProperty(2),
+              outlineWidth: new ConstantProperty(3),
               style: new ConstantProperty(LabelStyle.FILL_AND_OUTLINE),
               verticalOrigin: new ConstantProperty(VerticalOrigin.CENTER),
-              // Show when close, hide when far
+              // Always visible from 500km to 15000km altitude
               scaleByDistance: new ConstantProperty(
-                new NearFarScalar(nearDist, 1.0, farDist, 0.4)
+                new NearFarScalar(5e5, 1.0, 1.5e7, 0.5)
               ),
+              // Fade in as you zoom closer than 15M, fully visible below 10M
               translucencyByDistance: new ConstantProperty(
-                new NearFarScalar(nearDist, 1.0, farDist, 0.0)
+                new NearFarScalar(5e5, 1.0, 1.5e7, 0.0)
               ),
               disableDepthTestDistance: new ConstantProperty(Number.POSITIVE_INFINITY),
             },
