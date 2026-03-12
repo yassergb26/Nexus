@@ -8,6 +8,7 @@ import { useCctvMeshLines } from '../../features/cctv/useCctvMeshLines'
 import { useMilitaryBasesLayer } from '../../features/bases/useMilitaryBasesLayer'
 import { useCountriesLayer } from '../../features/countries/useCountriesLayer'
 import { useTerminatorLayer } from '../../features/terminator/useTerminatorLayer'
+import { useContinentLabels } from '../../features/labels/useContinentLabels'
 import { useVisualMode } from '../../hooks/useVisualMode'
 import { BroadcastPanel } from '../../features/broadcasts/BroadcastPanel'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
@@ -71,6 +72,7 @@ export default function LayerRenderer() {
   useMilitaryBasesLayer()
   useCountriesLayer()
   useTerminatorLayer()
+  useContinentLabels()
   useVisualMode()
   useEntityInteraction()
 
