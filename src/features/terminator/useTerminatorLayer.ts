@@ -1,7 +1,14 @@
 import { useEffect, useRef } from 'react'
-import { CustomDataSource, Cartesian3, Color, PolygonHierarchy, ConstantProperty, ColorMaterialProperty } from 'cesium'
+import { CustomDataSource, Cartesian3, Color, ConstantProperty } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
+
+/** Normalize longitude to [-180, 180] */
+function normalizeLon(lon: number): number {
+  while (lon > 180) lon -= 360
+  while (lon < -180) lon += 360
+  return lon
+}
 
 /** Compute the sub-solar point from real UTC time */
 function getSunPosition(date: Date): { lat: number; lon: number } {
@@ -14,9 +21,7 @@ function getSunPosition(date: Date): { lat: number; lon: number } {
   const declination = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10))
 
   // Sub-solar longitude from hour angle
-  let lon = -(hours - 12) * 15
-  if (lon > 180) lon -= 360
-  if (lon < -180) lon += 360
+  const lon = normalizeLon(-(hours - 12) * 15)
 
   return { lat: declination, lon }
 }
@@ -41,29 +46,11 @@ function getTerminatorPoints(sunLat: number, sunLon: number, segments = 72): { l
 
     points.push({
       lat: (lat * 180) / Math.PI,
-      lon: (lon * 180) / Math.PI,
+      lon: normalizeLon((lon * 180) / Math.PI),
     })
   }
 
   return points
-}
-
-/** Build night-side polygon from terminator points */
-function getNightPolygon(sunLat: number, terminatorPts: { lat: number; lon: number }[]): Cartesian3[] {
-  // The night pole is the anti-solar pole
-  const nightPoleLat = sunLat > 0 ? -90 : 90
-  // Build polygon: terminator line + sweep to night pole
-  const positions: Cartesian3[] = []
-
-  for (const pt of terminatorPts) {
-    positions.push(Cartesian3.fromDegrees(pt.lon, pt.lat, 500))
-  }
-
-  // Close via night pole
-  positions.push(Cartesian3.fromDegrees(terminatorPts[terminatorPts.length - 1].lon, nightPoleLat, 500))
-  positions.push(Cartesian3.fromDegrees(terminatorPts[0].lon, nightPoleLat, 500))
-
-  return positions
 }
 
 export function useTerminatorLayer() {
@@ -103,35 +90,33 @@ export function useTerminatorLayer() {
       const sun = getSunPosition(now)
       const terminatorPts = getTerminatorPoints(sun.lat, sun.lon)
 
-      // Terminator line
-      const linePositions = terminatorPts.map((p) => Cartesian3.fromDegrees(p.lon, p.lat, 1000))
+      // Terminator line — clamped to ground for 2D/3D compatibility
+      const linePositions = terminatorPts.map((p) => Cartesian3.fromDegrees(p.lon, p.lat))
       ds.entities.add({
         id: 'terminator-line',
         name: 'Day/Night Terminator',
         polyline: {
           positions: new ConstantProperty(linePositions),
           width: new ConstantProperty(2),
-          material: Color.fromCssColorString('#f59e0b').withAlpha(0.6),
+          material: Color.fromCssColorString('#f59e0b').withAlpha(0.7),
           clampToGround: new ConstantProperty(true),
         },
       })
 
-      // Night shadow polygon
-      const nightPositions = getNightPolygon(sun.lat, terminatorPts)
+      // Wider glow line for visual emphasis
       ds.entities.add({
-        id: 'terminator-shadow',
-        name: 'Night Shadow',
-        polygon: {
-          hierarchy: new ConstantProperty(new PolygonHierarchy(nightPositions)),
-          material: new ColorMaterialProperty(Color.fromCssColorString('#000000').withAlpha(0.35)),
-          outline: new ConstantProperty(false),
-          height: new ConstantProperty(0),
+        id: 'terminator-glow',
+        name: 'Terminator Glow',
+        polyline: {
+          positions: new ConstantProperty(linePositions),
+          width: new ConstantProperty(8),
+          material: Color.fromCssColorString('#f59e0b').withAlpha(0.12),
+          clampToGround: new ConstantProperty(true),
         },
       })
     }
 
     updateTerminator()
-    // Update every 60 seconds
     intervalRef.current = setInterval(updateTerminator, 60000)
   }, [isEnabled])
 }

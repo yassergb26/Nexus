@@ -15,7 +15,6 @@ import {
   DirectionalLight,
   OpenStreetMapImageryProvider,
 } from 'cesium'
-import type { ImageryLayer } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { useMapStore } from '../../store/useMapStore'
 import { REGIONAL_PRESETS } from '../../utils/presets'
@@ -136,7 +135,6 @@ export default function GlobeViewer() {
   const initialMount = useRef(true)
   const tilesetRef = useRef<Cesium3DTileset | null>(null)
   const aoRef = useRef<PostProcessStageComposite | null>(null)
-  const imageryRef = useRef<ImageryLayer | null>(null)
 
   const {
     setPosition,
@@ -197,6 +195,32 @@ export default function GlobeViewer() {
     viewer.scene.globe.show = false
     viewer.scene.globe.baseColor = Color.fromCssColorString('#0a0a0a')
     if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false
+
+    // Replace default Bing/Ion imagery with dark CartoDB tiles
+    viewer.imageryLayers.removeAll()
+    const darkTiles = new OpenStreetMapImageryProvider({
+      url: 'https://a.basemaps.cartocdn.com/dark_nolabels/',
+    })
+    const darkLayer = viewer.imageryLayers.addImageryProvider(darkTiles)
+    // Ion/Bing default imagery loads asynchronously after constructor —
+    // intercept any new layers and remove them, keeping only our dark tiles
+    const onLayerAdded = () => {
+      if (viewer.isDestroyed()) return
+      for (let i = viewer.imageryLayers.length - 1; i >= 0; i--) {
+        const layer = viewer.imageryLayers.get(i)
+        if (layer !== darkLayer) {
+          viewer.imageryLayers.remove(layer)
+        }
+      }
+    }
+    viewer.imageryLayers.layerAdded.addEventListener(onLayerAdded)
+    // Also clean on a delay in case layerAdded doesn't catch everything
+    const cleanImagery = () => {
+      if (viewer.isDestroyed()) return
+      onLayerAdded()
+    }
+    setTimeout(cleanImagery, 1000)
+    setTimeout(cleanImagery, 3000)
 
     // Dark space background
     viewer.scene.backgroundColor = new Color(0.04, 0.04, 0.04, 1.0)
@@ -291,8 +315,9 @@ export default function GlobeViewer() {
 
     // Track camera movement — only update URL on moveEnd
     const updatePositionLive = () => {
-      const cartographic = viewer.camera.positionCartographic
-      if (cartographic) {
+      try {
+        const cartographic = viewer.camera.positionCartographic
+        if (!cartographic || isNaN(cartographic.latitude)) return
         setPosition({
           latitude: CesiumMath.toDegrees(cartographic.latitude),
           longitude: CesiumMath.toDegrees(cartographic.longitude),
@@ -300,13 +325,16 @@ export default function GlobeViewer() {
           heading: CesiumMath.toDegrees(viewer.camera.heading),
           pitch: CesiumMath.toDegrees(viewer.camera.pitch),
         })
+      } catch {
+        // Camera position unavailable during scene morph
       }
     }
 
     const updatePositionFinal = () => {
       updatePositionLive()
-      const cartographic = viewer.camera.positionCartographic
-      if (cartographic) {
+      try {
+        const cartographic = viewer.camera.positionCartographic
+        if (!cartographic || isNaN(cartographic.latitude)) return
         const enabledLayers = useMapStore
           .getState()
           .layers.filter((l) => l.enabled)
@@ -320,6 +348,8 @@ export default function GlobeViewer() {
           view: useMapStore.getState().activePreset,
           layers: enabledLayers,
         })
+      } catch {
+        // Camera position unavailable during scene morph
       }
     }
 
@@ -406,31 +436,32 @@ export default function GlobeViewer() {
     if (!viewer || viewer.isDestroyed()) return
 
     if (mapMode === '2d') {
-      // Hide 3D tileset
-      if (tilesetRef.current) {
-        tilesetRef.current.show = false
-      }
-      // Show globe + add OSM imagery for 2D
+      // Hide 3D tileset immediately to prevent spike artifacts during morph
+      if (tilesetRef.current) tilesetRef.current.show = false
+      // Show globe immediately so dark tiles are ready
       viewer.scene.globe.show = true
       if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false
-      const osm = new OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' })
-      const layer = viewer.imageryLayers.addImageryProvider(osm)
-      imageryRef.current = layer
       viewer.scene.morphTo2D(1.5)
+      // Reinforce after morph completes (morph can reset globe state)
+      const on2DMorphComplete = () => {
+        viewer.scene.globe.show = true
+        if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false
+        if (tilesetRef.current) tilesetRef.current.show = false
+        viewer.scene.morphComplete.removeEventListener(on2DMorphComplete)
+      }
+      viewer.scene.morphComplete.addEventListener(on2DMorphComplete)
     } else {
       // Morph back to 3D
       viewer.scene.morphTo3D(1.5)
-      // Remove OSM imagery
-      if (imageryRef.current) {
-        viewer.imageryLayers.remove(imageryRef.current)
-        imageryRef.current = null
+      // Hide globe + show 3D tiles after morph completes
+      const on3DMorphComplete = () => {
+        viewer.scene.globe.show = false
+        if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false
+        if (tilesetRef.current) tilesetRef.current.show = true
+        viewer.scene.morphComplete.removeEventListener(on3DMorphComplete)
       }
-      // Hide globe, show 3D tiles
-      viewer.scene.globe.show = false
-      if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false
-      if (tilesetRef.current) {
-        tilesetRef.current.show = true
-      }
+      viewer.scene.morphComplete.addEventListener(on3DMorphComplete)
+      if (tilesetRef.current) tilesetRef.current.show = true
     }
   }, [mapMode, viewerRef])
 

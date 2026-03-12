@@ -50,7 +50,7 @@ const COUNTRY_LEGEND: LegendItem[] = [
 
 const TERMINATOR_LEGEND: LegendItem[] = [
   { color: '#f59e0b', label: 'Terminator line' },
-  { color: '#333333', label: 'Night hemisphere' },
+  { color: '#f59e0b66', label: 'Terminator glow' },
 ]
 
 interface LegendSectionProps {
