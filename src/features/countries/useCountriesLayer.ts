@@ -3,41 +3,127 @@ import { GeoJsonDataSource, Color, ConstantProperty, ColorMaterialProperty } fro
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
 
-/** Strategic significance coloring by country name */
+// ── Color palette ─────────────────────────────────────────────────────────
+const WESTERN   = '#60a5fa'   // USA & core Western allies
+const NATO_BLUE = '#3b82f6'   // NATO European members
+const UK_COLOR  = '#818cf8'   // UK
+const FR_COLOR  = '#93c5fd'   // France
+const RUSSIA    = '#f97316'   // Russia & aligned states
+const CHINA_RED = '#ef4444'   // China & DPRK
+const MENA_GOLD = '#eab308'   // Middle East & North Africa
+const INDIA     = '#a855f7'   // India
+const BRAZIL    = '#22c55e'   // Brazil & Latin America
+const UKRAINE   = '#fbbf24'   // Ukraine
+
+/** Strategic significance coloring by country name (matches Natural Earth NAME field) */
 const COUNTRY_COLORS: Record<string, string> = {
-  'United States of America': '#60a5fa',
-  'Canada': '#60a5fa',
-  'United Kingdom': '#818cf8',
-  'France': '#93c5fd',
-  'Germany': '#3b82f6',
-  'Italy': '#3b82f6',
-  'Spain': '#3b82f6',
-  'Poland': '#3b82f6',
-  'Turkey': '#3b82f6',
-  'Norway': '#3b82f6',
-  'Netherlands': '#3b82f6',
-  'Belgium': '#3b82f6',
-  'Denmark': '#3b82f6',
-  'Portugal': '#3b82f6',
-  'Greece': '#3b82f6',
-  'Romania': '#3b82f6',
-  'Czech Republic': '#3b82f6',
-  'Czechia': '#3b82f6',
-  'Russia': '#f97316',
-  'China': '#ef4444',
-  'North Korea': '#ef4444',
-  'Iran': '#f97316',
-  'India': '#a855f7',
-  'Japan': '#60a5fa',
-  'South Korea': '#60a5fa',
-  'Australia': '#60a5fa',
-  'Israel': '#60a5fa',
-  'Saudi Arabia': '#eab308',
-  'Brazil': '#22c55e',
-  'Ukraine': '#fbbf24',
+  // ── Western / Five Eyes ──
+  'United States of America': WESTERN,
+  'Canada': WESTERN,
+  'Australia': WESTERN,
+  'New Zealand': WESTERN,
+  'Japan': WESTERN,
+  'South Korea': WESTERN,
+  'Taiwan': WESTERN,
+  'Israel': WESTERN,
+
+  // ── UK ──
+  'United Kingdom': UK_COLOR,
+
+  // ── France ──
+  'France': FR_COLOR,
+
+  // ── NATO Europe ──
+  'Germany': NATO_BLUE,
+  'Italy': NATO_BLUE,
+  'Spain': NATO_BLUE,
+  'Poland': NATO_BLUE,
+  'Turkey': NATO_BLUE,
+  'Norway': NATO_BLUE,
+  'Netherlands': NATO_BLUE,
+  'Belgium': NATO_BLUE,
+  'Denmark': NATO_BLUE,
+  'Portugal': NATO_BLUE,
+  'Greece': NATO_BLUE,
+  'Romania': NATO_BLUE,
+  'Czechia': NATO_BLUE,
+  'Hungary': NATO_BLUE,
+  'Bulgaria': NATO_BLUE,
+  'Croatia': NATO_BLUE,
+  'Slovakia': NATO_BLUE,
+  'Slovenia': NATO_BLUE,
+  'Estonia': NATO_BLUE,
+  'Latvia': NATO_BLUE,
+  'Lithuania': NATO_BLUE,
+  'Luxembourg': NATO_BLUE,
+  'Iceland': NATO_BLUE,
+  'Montenegro': NATO_BLUE,
+  'North Macedonia': NATO_BLUE,
+  'Albania': NATO_BLUE,
+  'Finland': NATO_BLUE,
+  'Sweden': NATO_BLUE,
+
+  // ── EU non-NATO ──
+  'Ireland': NATO_BLUE,
+  'Austria': NATO_BLUE,
+  'Switzerland': NATO_BLUE,
+  'Cyprus': NATO_BLUE,
+
+  // ── Russia & aligned ──
+  'Russia': RUSSIA,
+  'Belarus': RUSSIA,
+  'Syria': RUSSIA,
+  'Venezuela': RUSSIA,
+  'Cuba': RUSSIA,
+  'North Korea': CHINA_RED,
+
+  // ── China ──
+  'China': CHINA_RED,
+  'Myanmar': CHINA_RED,
+  'Laos': CHINA_RED,
+  'Cambodia': CHINA_RED,
+
+  // ── India ──
+  'India': INDIA,
+
+  // ── Ukraine ──
+  'Ukraine': UKRAINE,
+
+  // ── MENA — Middle East & North Africa ──
+  'Saudi Arabia': MENA_GOLD,
+  'United Arab Emirates': MENA_GOLD,
+  'Qatar': MENA_GOLD,
+  'Kuwait': MENA_GOLD,
+  'Bahrain': MENA_GOLD,
+  'Oman': MENA_GOLD,
+  'Yemen': MENA_GOLD,
+  'Iraq': MENA_GOLD,
+  'Jordan': MENA_GOLD,
+  'Lebanon': MENA_GOLD,
+  'Palestine': MENA_GOLD,
+  'Egypt': MENA_GOLD,
+  'Libya': MENA_GOLD,
+  'Tunisia': MENA_GOLD,
+  'Algeria': MENA_GOLD,
+  'Morocco': MENA_GOLD,
+  'W. Sahara': MENA_GOLD,
+  'Sudan': MENA_GOLD,
+  'Iran': MENA_GOLD,
+  'Djibouti': MENA_GOLD,
+  'Somalia': MENA_GOLD,
+  'Somaliland': MENA_GOLD,
+  'Mauritania': MENA_GOLD,
+
+  // ── Latin America ──
+  'Brazil': BRAZIL,
+  'Mexico': BRAZIL,
+  'Argentina': BRAZIL,
+  'Colombia': BRAZIL,
+  'Chile': BRAZIL,
+  'Peru': BRAZIL,
 }
 
-const DEFAULT_STROKE = '#00d4aa'
+const DEFAULT_COLOR = '#00d4aa'
 
 export function useCountriesLayer() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
@@ -59,9 +145,9 @@ export function useCountriesLayer() {
     }
 
     GeoJsonDataSource.load('/data/countries.geojson', {
-      stroke: Color.fromCssColorString(DEFAULT_STROKE),
+      stroke: Color.fromCssColorString(DEFAULT_COLOR),
       strokeWidth: 1.5,
-      fill: Color.fromCssColorString('#00d4aa').withAlpha(0.04),
+      fill: Color.fromCssColorString(DEFAULT_COLOR).withAlpha(0.06),
       clampToGround: true,
     }).then((ds) => {
       if (viewer.isDestroyed()) return
@@ -72,15 +158,16 @@ export function useCountriesLayer() {
                      entity.properties?.ADMIN?.getValue() ||
                      entity.properties?.name?.getValue()
 
-        // Apply per-country colors
+        // Apply per-country colors — every country gets colored
         const countryColor = name ? COUNTRY_COLORS[name] : undefined
-        if (countryColor && entity.polygon) {
-          entity.polygon.outlineColor = new ConstantProperty(Color.fromCssColorString(countryColor))
-          entity.polygon.material = new ColorMaterialProperty(Color.fromCssColorString(countryColor).withAlpha(0.06))
+        const color = countryColor || DEFAULT_COLOR
+
+        if (entity.polygon) {
+          entity.polygon.outlineColor = new ConstantProperty(Color.fromCssColorString(color))
+          entity.polygon.material = new ColorMaterialProperty(Color.fromCssColorString(color).withAlpha(0.08))
         }
 
         // Set entity name for tooltip
-        // Entity IDs from GeoJSON are read-only, so we store country info in the name
         if (name) entity.name = `country-${name}`
       }
 

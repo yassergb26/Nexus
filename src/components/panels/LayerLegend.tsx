@@ -42,15 +42,20 @@ const CAMERA_LEGEND: LegendItem[] = [
 
 const COUNTRY_LEGEND: LegendItem[] = [
   { color: '#60a5fa', label: 'USA / Western' },
-  { color: '#3b82f6', label: 'NATO' },
-  { color: '#f97316', label: 'Russia / Iran' },
+  { color: '#3b82f6', label: 'NATO / EU' },
+  { color: '#eab308', label: 'MENA' },
+  { color: '#f97316', label: 'Russia / Aligned' },
   { color: '#ef4444', label: 'China / DPRK' },
+  { color: '#a855f7', label: 'India' },
+  { color: '#22c55e', label: 'Latin America' },
+  { color: '#fbbf24', label: 'Ukraine' },
   { color: '#00d4aa', label: 'Other' },
 ]
 
 const TERMINATOR_LEGEND: LegendItem[] = [
   { color: '#f59e0b', label: 'Terminator line' },
   { color: '#f59e0b66', label: 'Terminator glow' },
+  { color: '#00000059', label: 'Night shadow' },
 ]
 
 interface LegendSectionProps {

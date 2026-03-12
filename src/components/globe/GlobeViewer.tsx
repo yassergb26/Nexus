@@ -199,7 +199,7 @@ export default function GlobeViewer() {
     // Replace default Bing/Ion imagery with dark CartoDB tiles
     viewer.imageryLayers.removeAll()
     const darkTiles = new OpenStreetMapImageryProvider({
-      url: 'https://a.basemaps.cartocdn.com/dark_nolabels/',
+      url: 'https://a.basemaps.cartocdn.com/dark_all/',
     })
     const darkLayer = viewer.imageryLayers.addImageryProvider(darkTiles)
     // Ion/Bing default imagery loads asynchronously after constructor —
