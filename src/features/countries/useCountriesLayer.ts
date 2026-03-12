@@ -210,6 +210,8 @@ const COUNTRY_COLORS: Record<string, string> = {
   // ── Territories ──
   'Falkland Is.': UK_COLOR,
   'N. Cyprus': NATO_BLUE,
+  'Fr. S. Antarctic Lands': FR_COLOR,
+  'Antarctica': '#78716c',
 
   // ── Other Americas ──
   'Ecuador': BRAZIL,
@@ -231,6 +233,30 @@ const COUNTRY_COLORS: Record<string, string> = {
   'Trinidad and Tobago': BRAZIL,
   'Bahamas': BRAZIL,
   'Puerto Rico': WESTERN,
+}
+
+/** Map abbreviated / non-English GeoJSON names → proper English names */
+const ENGLISH_NAMES: Record<string, string> = {
+  'Dem. Rep. Congo': 'Democratic Republic of the Congo',
+  'Central African Rep.': 'Central African Republic',
+  'Eq. Guinea': 'Equatorial Guinea',
+  'S. Sudan': 'South Sudan',
+  'W. Sahara': 'Western Sahara',
+  'Dominican Rep.': 'Dominican Republic',
+  'Bosnia and Herz.': 'Bosnia and Herzegovina',
+  'N. Cyprus': 'Northern Cyprus',
+  'Falkland Is.': 'Falkland Islands',
+  'Solomon Is.': 'Solomon Islands',
+  'Fr. S. Antarctic Lands': 'French Southern Antarctic Lands',
+  'Côte d\'Ivoire': 'Ivory Coast',
+  'Timor-Leste': 'East Timor',
+  'eSwatini': 'Eswatini',
+  'Czechia': 'Czech Republic',
+  'North Macedonia': 'North Macedonia',
+  'Brunei': 'Brunei',
+  'Somaliland': 'Somaliland',
+  'Laos': 'Laos',
+  'Myanmar': 'Myanmar',
 }
 
 const DEFAULT_COLOR = '#00d4aa'
@@ -264,12 +290,12 @@ export function useCountriesLayer() {
 
       const entities = ds.entities.values
       for (const entity of entities) {
-        const name = entity.properties?.NAME?.getValue() ||
-                     entity.properties?.ADMIN?.getValue() ||
-                     entity.properties?.name?.getValue()
+        const rawName = entity.properties?.NAME?.getValue() ||
+                        entity.properties?.ADMIN?.getValue() ||
+                        entity.properties?.name?.getValue()
 
         // Apply per-country colors — every country gets colored
-        const countryColor = name ? COUNTRY_COLORS[name] : undefined
+        const countryColor = rawName ? COUNTRY_COLORS[rawName] : undefined
         const color = countryColor || DEFAULT_COLOR
 
         if (entity.polygon) {
@@ -277,8 +303,9 @@ export function useCountriesLayer() {
           entity.polygon.material = new ColorMaterialProperty(Color.fromCssColorString(color).withAlpha(0.08))
         }
 
-        // Set entity name for tooltip
-        if (name) entity.name = `country-${name}`
+        // Set entity name for tooltip — use proper English name
+        const displayName = rawName ? (ENGLISH_NAMES[rawName] || rawName) : undefined
+        if (displayName) entity.name = `country-${displayName}`
       }
 
       viewer.dataSources.add(ds)
