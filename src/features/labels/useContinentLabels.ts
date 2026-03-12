@@ -76,9 +76,9 @@ interface GeoFeature {
   }
 }
 
-const CONTINENT_COLOR = Color.fromCssColorString('#a0a0a0')
-const COUNTRY_COLOR = Color.fromCssColorString('#808080')
-const OUTLINE_COLOR = Color.fromCssColorString('#0a0a0a')
+const CONTINENT_COLOR = Color.WHITE
+const COUNTRY_COLOR = Color.fromCssColorString('#e0e0e0')
+const OUTLINE_COLOR = Color.fromCssColorString('#000000')
 
 /**
  * Map labels in English — only visible in 2D mode.
@@ -112,7 +112,7 @@ export function useContinentLabels() {
         position: Cartesian3.fromDegrees(c.lon, c.lat, 0),
         label: {
           text: new ConstantProperty(c.name.toUpperCase()),
-          font: new ConstantProperty('bold 14px Inter, system-ui, sans-serif'),
+          font: new ConstantProperty('bold 18px Inter, system-ui, sans-serif'),
           fillColor: new ConstantProperty(CONTINENT_COLOR),
           outlineColor: new ConstantProperty(OUTLINE_COLOR),
           outlineWidth: new ConstantProperty(3),
@@ -146,9 +146,9 @@ export function useContinentLabels() {
           const displayName = ENGLISH_LABEL[NAME] || NAME
 
           // Larger countries (lower LABELRANK) are visible from further away
-          const farDist = LABELRANK <= 2 ? 6e6 : LABELRANK <= 4 ? 4e6 : 2e6
-          const nearDist = LABELRANK <= 2 ? 5e5 : LABELRANK <= 4 ? 3e5 : 1.5e5
-          const fontSize = LABELRANK <= 2 ? 12 : LABELRANK <= 4 ? 11 : 10
+          const farDist = LABELRANK <= 2 ? 1.2e7 : LABELRANK <= 4 ? 8e6 : 5e6
+          const nearDist = LABELRANK <= 2 ? 8e5 : LABELRANK <= 4 ? 5e5 : 3e5
+          const fontSize = LABELRANK <= 2 ? 15 : LABELRANK <= 4 ? 13 : 11
 
           ds.entities.add({
             id: `country-label-${NAME}`,
