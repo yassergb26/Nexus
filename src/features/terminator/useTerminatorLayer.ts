@@ -7,8 +7,10 @@ import {
   ColorMaterialProperty,
   Rectangle as CesiumRectangle,
   DirectionalLight,
-  SunLight,
   JulianDate,
+  CustomShader,
+  UniformType,
+  Cesium3DTileset,
 } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
@@ -59,12 +61,60 @@ function getTerminatorPoints(sunLat: number, sunLon: number, segments = 72): { l
 const FIXED_LIGHT_DIR = new Cartesian3(0.35, -0.9, -0.28)
 const FIXED_LIGHT_INTENSITY = 1.8
 
+/** Find the Google Photorealistic 3D Tileset from the viewer primitives */
+function findTileset(viewer: InstanceType<typeof import('cesium').Viewer>): Cesium3DTileset | null {
+  const primitives = viewer.scene.primitives
+  for (let i = 0; i < primitives.length; i++) {
+    const p = primitives.get(i)
+    if (p instanceof Cesium3DTileset) return p
+  }
+  return null
+}
+
+/** Compute sun direction as ECEF unit vector */
+function getSunDirectionECEF(sun: { lat: number; lon: number }): Cartesian3 {
+  const latRad = (sun.lat * Math.PI) / 180
+  const lonRad = (sun.lon * Math.PI) / 180
+  return new Cartesian3(
+    Math.cos(latRad) * Math.cos(lonRad),
+    Math.cos(latRad) * Math.sin(lonRad),
+    Math.sin(latRad)
+  )
+}
+
+/** Create a CustomShader that darkens tiles on the night side */
+function createNightShader(sunDirection: Cartesian3): CustomShader {
+  return new CustomShader({
+    uniforms: {
+      u_sunDirection: {
+        type: UniformType.VEC3,
+        value: sunDirection,
+      },
+    },
+    fragmentShaderText: `
+      void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+        // Fragment position in world coordinates (ECEF)
+        vec3 posWC = fsInput.attributes.positionWC;
+        vec3 normalizedPos = normalize(posWC);
+        vec3 sunDir = normalize(u_sunDirection);
+        // Dot product: > 0 = facing sun (day), < 0 = away from sun (night)
+        float sunDot = dot(normalizedPos, sunDir);
+        // Smooth transition over ~5 degrees at the terminator
+        float nightFactor = smoothstep(-0.05, 0.05, -sunDot);
+        // Darken night side to ~12% brightness
+        material.diffuse *= mix(1.0, 0.12, nightFactor);
+      }
+    `,
+  })
+}
+
 export function useTerminatorLayer() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
   const isEnabled = useMapStore((s) => s.layers.find((l) => l.id === 'terminator')?.enabled ?? false)
   const mapMode = useMapStore((s) => s.mapMode)
   const dataSourceRef = useRef<CustomDataSource | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const shaderRef = useRef<CustomShader | null>(null)
 
   useEffect(() => {
     const viewer = viewerRef.current
@@ -92,33 +142,39 @@ export function useTerminatorLayer() {
       intervalRef.current = null
     }
 
-    if (!isEnabled) {
-      // Restore fixed lighting — always daylit
+    // Helper: remove custom shader from 3D tileset
+    const clearNightShader = () => {
+      if (!viewer || viewer.isDestroyed()) return
+      const tileset = findTileset(viewer)
+      if (tileset) tileset.customShader = undefined as unknown as CustomShader
+      shaderRef.current = null
+    }
+
+    // Helper: restore fixed daylit lighting
+    const restoreFixedLighting = () => {
+      if (!viewer || viewer.isDestroyed()) return
       viewer.scene.light = new DirectionalLight({
         direction: FIXED_LIGHT_DIR,
         intensity: FIXED_LIGHT_INTENSITY,
       })
       viewer.scene.globe.enableLighting = false
-      // Pin clock back to solar noon
       const noon = new Date()
       noon.setUTCHours(12, 0, 0, 0)
       viewer.clock.currentTime = JulianDate.fromDate(noon)
       viewer.clock.shouldAnimate = false
+    }
+
+    if (!isEnabled) {
+      clearNightShader()
+      restoreFixedLighting()
       return
     }
 
     // ── Enable Day/Night ──────────────────────────────────────────────────
-    // SunLight: CesiumJS built-in light that follows the sun position
-    // based on viewer.clock.currentTime. This darkens 3D tiles on the
-    // night side automatically.
-    viewer.scene.light = new SunLight({ intensity: 2.0 })
-    viewer.scene.globe.enableLighting = true
-
-    // Set clock to real UTC time so SunLight computes correct position
-    viewer.clock.currentTime = JulianDate.fromDate(new Date())
-    viewer.clock.shouldAnimate = true
-
     const is2D = mapMode === '2d'
+
+    // Enable globe lighting for 2D mode
+    viewer.scene.globe.enableLighting = true
 
     const updateTerminator = () => {
       ds.entities.removeAll()
@@ -126,11 +182,25 @@ export function useTerminatorLayer() {
       const sun = getSunPosition(now)
       const terminatorPts = getTerminatorPoints(sun.lat, sun.lon)
 
-      // Keep clock in sync with real time
-      viewer.clock.currentTime = JulianDate.fromDate(now)
+      // ── 3D mode: apply CustomShader to darken night side of 3D tiles ──
+      if (!is2D) {
+        const sunDir = getSunDirectionECEF(sun)
+        const tileset = findTileset(viewer)
+        if (tileset) {
+          if (!shaderRef.current) {
+            // First time — create the shader
+            shaderRef.current = createNightShader(sunDir)
+            tileset.customShader = shaderRef.current
+          } else {
+            // Update existing shader uniform
+            shaderRef.current.setUniform('u_sunDirection', sunDir)
+          }
+        }
+      }
 
-      // 2D mode: add Rectangle shadow (SunLight doesn't affect flat map tiles)
+      // ── 2D mode: Rectangle shadow overlay ──
       if (is2D) {
+        clearNightShader()
         const nightWest = normalizeLon(sun.lon + 90)
         const nightEast = normalizeLon(sun.lon - 90)
         ds.entities.add({
@@ -146,7 +216,7 @@ export function useTerminatorLayer() {
         })
       }
 
-      // Terminator line (both modes)
+      // ── Terminator line (both modes) ──
       const linePositions = terminatorPts.map((p) =>
         Cartesian3.fromDegrees(p.lon, p.lat, 0)
       )
@@ -183,18 +253,8 @@ export function useTerminatorLayer() {
         clearInterval(intervalRef.current)
         intervalRef.current = null
       }
-      if (viewer && !viewer.isDestroyed()) {
-        // Restore fixed lighting on cleanup
-        viewer.scene.light = new DirectionalLight({
-          direction: FIXED_LIGHT_DIR,
-          intensity: FIXED_LIGHT_INTENSITY,
-        })
-        viewer.scene.globe.enableLighting = false
-        const noon = new Date()
-        noon.setUTCHours(12, 0, 0, 0)
-        viewer.clock.currentTime = JulianDate.fromDate(noon)
-        viewer.clock.shouldAnimate = false
-      }
+      clearNightShader()
+      restoreFixedLighting()
     }
   }, [isEnabled, mapMode, viewerRef])
 }
