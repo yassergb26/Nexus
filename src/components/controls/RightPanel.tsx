@@ -11,6 +11,7 @@ import {
   Zap,
   Home,
   RotateCcw,
+  Map,
 } from 'lucide-react'
 import { useMapStore } from '../../store/useMapStore'
 import type { VisualMode, LayoutMode, RenderQuality } from '../../types'
@@ -164,6 +165,8 @@ export default function RightPanel() {
     fps,
     flyHome,
     resetAll,
+    mapMode,
+    setMapMode,
   } = useMapStore()
 
   const [layoutOpen, setLayoutOpen] = useState(false)
@@ -191,6 +194,15 @@ export default function RightPanel() {
           icon={<RotateCcw size={13} />}
           label="RESET"
           onClick={resetAll}
+        />
+
+        {/* MAP MODE */}
+        <ControlButton
+          icon={<Map size={13} />}
+          label={mapMode === '2d' ? 'MAP 2D' : 'MAP 3D'}
+          active={mapMode === '2d'}
+          onClick={() => setMapMode(mapMode === '2d' ? '3d' : '2d')}
+          accent="#3b82f6"
         />
 
         {/* BLOOM */}

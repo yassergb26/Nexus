@@ -6,6 +6,8 @@ import { useSatellitesLayer } from '../../features/satellites/useSatellitesLayer
 import { useCctvLayer } from '../../features/cctv/useCctvLayer'
 import { useCctvMeshLines } from '../../features/cctv/useCctvMeshLines'
 import { useMilitaryBasesLayer } from '../../features/bases/useMilitaryBasesLayer'
+import { useCountriesLayer } from '../../features/countries/useCountriesLayer'
+import { useTerminatorLayer } from '../../features/terminator/useTerminatorLayer'
 import { useVisualMode } from '../../hooks/useVisualMode'
 import { BroadcastPanel } from '../../features/broadcasts/BroadcastPanel'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
@@ -28,7 +30,9 @@ function useEntityInteraction() {
     handler.setInputAction((click: { position: Cartesian2 }) => {
       const picked = viewer.scene.pick(click.position)
       if (picked?.id instanceof Entity && typeof picked.id.id === 'string') {
-        openPanel(picked.id.id)
+        // Country entities have name prefixed with 'country-' (id is read-only from GeoJSON)
+        const panelId = picked.id.name?.startsWith('country-') ? picked.id.name : picked.id.id
+        openPanel(panelId)
         return
       }
     }, ScreenSpaceEventType.LEFT_CLICK)
@@ -65,6 +69,8 @@ export default function LayerRenderer() {
   useCctvLayer()
   useCctvMeshLines()
   useMilitaryBasesLayer()
+  useCountriesLayer()
+  useTerminatorLayer()
   useVisualMode()
   useEntityInteraction()
 

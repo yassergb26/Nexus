@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Minus, Plane, Satellite, Activity, Camera, CloudLightning, Shield } from 'lucide-react'
+import { Plus, Minus, Plane, Satellite, Activity, Camera, CloudLightning, Shield, Globe2, Moon } from 'lucide-react'
 import { useMapStore } from '../../store/useMapStore'
 
 /** Source labels for display under layer names */
@@ -10,6 +10,8 @@ const LAYER_SOURCES: Record<string, string> = {
   satellites:  'CelesTrak',
   weather:     'NOAA NEXRAD (globe overlay)',
   cctv:        'CCTV + Hotspot webcams',
+  countries:   'Natural Earth · 177 countries',
+  terminator:  'Real-time UTC calculation',
 }
 
 /** Icon mapping for the data layers list */
@@ -20,6 +22,8 @@ const LAYER_ICONS: Record<string, React.ReactNode> = {
   satellites:  <Satellite size={14} className="text-[#8b5cf6]" />,
   weather:     <CloudLightning size={14} className="text-[#64748b]" />,
   cctv:        <Camera size={14} className="text-[#10b981]" />,
+  countries:   <Globe2 size={14} className="text-[#00d4aa]" />,
+  terminator:  <Moon size={14} className="text-[#64748b]" />,
 }
 
 /** Primary layers shown in the DATA LAYERS panel (matching WorldView) */
@@ -30,6 +34,8 @@ const PRIMARY_LAYER_IDS = [
   'satellites',
   'weather',
   'cctv',
+  'countries',
+  'terminator',
 ]
 
 interface CollapsiblePanelProps {

@@ -13,12 +13,9 @@ import {
   Ion,
   JulianDate,
   DirectionalLight,
-  EllipsoidSurfaceAppearance,
-  Material,
-  Primitive,
-  GeometryInstance,
-  EllipsoidGeometry,
+  OpenStreetMapImageryProvider,
 } from 'cesium'
+import type { ImageryLayer } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { useMapStore } from '../../store/useMapStore'
 import { REGIONAL_PRESETS } from '../../utils/presets'
@@ -139,6 +136,7 @@ export default function GlobeViewer() {
   const initialMount = useRef(true)
   const tilesetRef = useRef<Cesium3DTileset | null>(null)
   const aoRef = useRef<PostProcessStageComposite | null>(null)
+  const imageryRef = useRef<ImageryLayer | null>(null)
 
   const {
     setPosition,
@@ -148,6 +146,7 @@ export default function GlobeViewer() {
     setPendingFlyTo,
     performanceMode,
     renderQuality,
+    mapMode,
   } = useMapStore()
 
   const flyTo = useCallback(
@@ -174,7 +173,6 @@ export default function GlobeViewer() {
     const q = QUALITY_PRESETS[renderQuality]
 
     const viewer = new Viewer(containerRef.current, {
-      globe: false,
       timeline: false,
       animation: false,
       homeButton: false,
@@ -193,6 +191,12 @@ export default function GlobeViewer() {
       requestRenderMode: q.requestRenderMode,
       maximumRenderTimeChange: q.requestRenderMode ? Infinity : undefined,
     })
+
+    // Hide globe by default (3D tiles render everything in 3D mode)
+    // Globe is kept available for 2D map mode switching
+    viewer.scene.globe.show = false
+    viewer.scene.globe.baseColor = Color.fromCssColorString('#0a0a0a')
+    if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false
 
     // Dark space background
     viewer.scene.backgroundColor = new Color(0.04, 0.04, 0.04, 1.0)
@@ -223,27 +227,6 @@ export default function GlobeViewer() {
 
     viewer.scene.postProcessStages.bloom.enabled = false
     viewer.scene.postProcessStages.fxaa.enabled = q.fxaa
-
-    // ── Dark sphere behind 3D Tiles to prevent horizon clipping ──────────
-    // With globe: false, there's no sphere behind Google 3D Tiles.
-    // At the horizon, gaps between tiles show empty space.
-    // Radii at 99% of Earth's WGS84 values to sit behind tiles and avoid z-fighting.
-    const scale = 0.99
-    const darkGlobe = new Primitive({
-      geometryInstances: new GeometryInstance({
-        geometry: new EllipsoidGeometry({
-          radii: new Cartesian3(6378137.0 * scale, 6378137.0 * scale, 6356752.3 * scale),
-        }),
-      }),
-      appearance: new EllipsoidSurfaceAppearance({
-        material: Material.fromType('Color', {
-          color: new Color(0.02, 0.02, 0.04, 1.0),
-        }),
-        aboveGround: false,
-      }),
-      asynchronous: false,
-    })
-    viewer.scene.primitives.add(darkGlobe)
 
     // ── Google Photorealistic 3D Tiles ───────────────────────────────────
     // Track whether this effect instance was cleaned up (React StrictMode
@@ -416,6 +399,40 @@ export default function GlobeViewer() {
       ;(tilesetRef.current as any).maximumCacheOverflowBytes = q.tileOverflowMB * 1024 * 1024
     }
   }, [performanceMode, renderQuality, viewerRef])
+
+  // ── 2D / 3D map mode switching ──────────────────────────────────────
+  useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer || viewer.isDestroyed()) return
+
+    if (mapMode === '2d') {
+      // Hide 3D tileset
+      if (tilesetRef.current) {
+        tilesetRef.current.show = false
+      }
+      // Show globe + add OSM imagery for 2D
+      viewer.scene.globe.show = true
+      if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false
+      const osm = new OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' })
+      const layer = viewer.imageryLayers.addImageryProvider(osm)
+      imageryRef.current = layer
+      viewer.scene.morphTo2D(1.5)
+    } else {
+      // Morph back to 3D
+      viewer.scene.morphTo3D(1.5)
+      // Remove OSM imagery
+      if (imageryRef.current) {
+        viewer.imageryLayers.remove(imageryRef.current)
+        imageryRef.current = null
+      }
+      // Hide globe, show 3D tiles
+      viewer.scene.globe.show = false
+      if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false
+      if (tilesetRef.current) {
+        tilesetRef.current.show = true
+      }
+    }
+  }, [mapMode, viewerRef])
 
   // React to preset changes — skip initial mount
   useEffect(() => {

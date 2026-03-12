@@ -170,6 +170,28 @@ function SatelliteDetail({ id }: { id: string }) {
   )
 }
 
+function CountryDetail({ id }: { id: string }) {
+  const name = id.replace('country-', '').replace(/^\d+-/, '')
+  return (
+    <PanelCard id={id} title="COUNTRY">
+      <div className="text-[11px] font-mono text-[#e0e0e0] mb-1">{name}</div>
+      <div className="space-y-1.5">
+        <div className="flex justify-between text-[9px] font-mono">
+          <span className="text-[#555]">Type</span>
+          <span className="text-[#888]">Sovereign State</span>
+        </div>
+        <div className="flex justify-between text-[9px] font-mono">
+          <span className="text-[#555]">Status</span>
+          <span className="text-[#00d4aa]">ACTIVE</span>
+        </div>
+      </div>
+      <div className="mt-3 pt-2 border-t border-[#222] text-[8px] font-mono text-[#444]">
+        Country intelligence data, economic indicators, and threat assessment will be available in future updates.
+      </div>
+    </PanelCard>
+  )
+}
+
 function GenericDetail({ id }: { id: string }) {
   const type = id.split('-')[0].toUpperCase()
   return (
@@ -203,6 +225,7 @@ export default function EntityDetailPanels() {
     if (id.startsWith('eq-')) return <EarthquakeDetail key={id} id={id} />
     if (id.startsWith('flight-')) return <FlightDetail key={id} id={id} />
     if (id.startsWith('sat-')) return <SatelliteDetail key={id} id={id} />
+    if (id.startsWith('country-')) return <CountryDetail key={id} id={id} />
     return <GenericDetail key={id} id={id} />
   }
 

@@ -86,4 +86,6 @@ export interface Landmark {
 
 export type LayoutMode = 'standard' | 'tactical' | 'cinematic'
 
+export type MapMode = '3d' | '2d'
+
 export type RenderQuality = 'ultra' | 'high' | 'medium' | 'low' | 'potato'

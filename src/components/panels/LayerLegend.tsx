@@ -40,6 +40,19 @@ const CAMERA_LEGEND: LegendItem[] = [
   { color: '#eab308', label: 'Strategic location' },
 ]
 
+const COUNTRY_LEGEND: LegendItem[] = [
+  { color: '#60a5fa', label: 'USA / Western' },
+  { color: '#3b82f6', label: 'NATO' },
+  { color: '#f97316', label: 'Russia / Iran' },
+  { color: '#ef4444', label: 'China / DPRK' },
+  { color: '#00d4aa', label: 'Other' },
+]
+
+const TERMINATOR_LEGEND: LegendItem[] = [
+  { color: '#f59e0b', label: 'Terminator line' },
+  { color: '#333333', label: 'Night hemisphere' },
+]
+
 interface LegendSectionProps {
   title: string
   items: LegendItem[]
@@ -74,7 +87,7 @@ export default function LayerLegend() {
   if (cleanUI) return null
 
   const isEnabled = (id: string) => layers.find((l) => l.id === id)?.enabled ?? false
-  const anyEnabled = ['flights', 'bases', 'earthquakes', 'satellites', 'cctv'].some(isEnabled)
+  const anyEnabled = ['flights', 'bases', 'earthquakes', 'satellites', 'cctv', 'countries', 'terminator'].some(isEnabled)
 
   return (
     <div className="fixed bottom-20 left-4 z-30 pointer-events-auto">
@@ -95,6 +108,8 @@ export default function LayerLegend() {
                 <LegendSection title="Earthquakes" items={EARTHQUAKE_LEGEND} enabled={isEnabled('earthquakes')} />
                 <LegendSection title="Satellites" items={SATELLITE_LEGEND} enabled={isEnabled('satellites')} />
                 <LegendSection title="Live Cameras" items={CAMERA_LEGEND} enabled={isEnabled('cctv')} />
+                <LegendSection title="Countries" items={COUNTRY_LEGEND} enabled={isEnabled('countries')} />
+                <LegendSection title="Day/Night" items={TERMINATOR_LEGEND} enabled={isEnabled('terminator')} />
               </>
             ) : (
               <div className="text-[9px] font-mono text-[#333]">No layers active</div>

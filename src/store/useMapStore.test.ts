@@ -91,7 +91,7 @@ describe('useMapStore', () => {
     expect(preset!.name).toBe('Europe')
   })
 
-  it('has 25 default layers', () => {
-    expect(useMapStore.getState().layers.length).toBe(25)
+  it('has 27 default layers', () => {
+    expect(useMapStore.getState().layers.length).toBe(27)
   })
 })

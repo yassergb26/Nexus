@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { MapPosition, VisualMode, MapLayer, RegionalPreset, TimeRange, FlyToTarget, LayoutMode, RenderQuality } from '../types'
+import type { MapPosition, VisualMode, MapLayer, RegionalPreset, TimeRange, FlyToTarget, LayoutMode, MapMode, RenderQuality } from '../types'
 import { REGIONAL_PRESETS } from '../utils/presets'
 import { DEFAULT_LAYERS } from '../utils/layers'
 
@@ -26,6 +26,7 @@ interface MapState {
   hoveredEntity: { id: string; screenX: number; screenY: number; name: string } | null
   openPanels: string[]
   cctvMeshVisible: boolean
+  mapMode: MapMode
 
   setPosition: (position: Partial<MapPosition>) => void
   setVisualMode: (mode: VisualMode) => void
@@ -54,6 +55,7 @@ interface MapState {
   openPanel: (id: string) => void
   closePanel: (id: string) => void
   toggleCctvMesh: () => void
+  setMapMode: (mode: MapMode) => void
 }
 
 export const useMapStore = create<MapState>((set, get) => ({
@@ -119,6 +121,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   hoveredEntity: null,
   openPanels: [],
   cctvMeshVisible: false,
+  mapMode: '3d',
   setTimeRange: (range) => set({ timeRange: range }),
   setPendingFlyTo: (target) => set({ pendingFlyTo: target }),
   togglePerformanceMode: () => set((state) => ({ performanceMode: !state.performanceMode })),
@@ -151,6 +154,7 @@ export const useMapStore = create<MapState>((set, get) => ({
     sharpenAmount: 49,
     visualMode: 'normal',
     cctvMeshVisible: false,
+    mapMode: '3d',
   }),
   setHoveredEntity: (entity) => set({ hoveredEntity: entity }),
   openPanel: (id) => set((state) => {
@@ -160,4 +164,5 @@ export const useMapStore = create<MapState>((set, get) => ({
   }),
   closePanel: (id) => set((state) => ({ openPanels: state.openPanels.filter((p) => p !== id) })),
   toggleCctvMesh: () => set((state) => ({ cctvMeshVisible: !state.cctvMeshVisible })),
+  setMapMode: (mode) => set({ mapMode: mode }),
 }))

@@ -3,8 +3,8 @@ import { DEFAULT_LAYERS } from './layers'
 import type { LayerCategory } from '../types'
 
 describe('DEFAULT_LAYERS', () => {
-  it('has 25 layers', () => {
-    expect(DEFAULT_LAYERS.length).toBe(25)
+  it('has 27 layers', () => {
+    expect(DEFAULT_LAYERS.length).toBe(27)
   })
 
   it('all layers have required fields', () => {

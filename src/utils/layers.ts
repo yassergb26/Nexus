@@ -119,6 +119,24 @@ export const DEFAULT_LAYERS: MapLayer[] = [
     color: '#e11d48',
   },
 
+  // Geopolitical
+  {
+    id: 'countries',
+    name: 'Country Borders',
+    category: 'intelligence',
+    icon: 'Globe2',
+    enabled: false,
+    color: '#00d4aa',
+  },
+  {
+    id: 'terminator',
+    name: 'Day/Night',
+    category: 'natural',
+    icon: 'Moon',
+    enabled: false,
+    color: '#64748b',
+  },
+
   // Natural Events
   {
     id: 'earthquakes',
