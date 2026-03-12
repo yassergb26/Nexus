@@ -7,6 +7,8 @@ import {
   ColorMaterialProperty,
   Rectangle as CesiumRectangle,
   DirectionalLight,
+  SunLight,
+  JulianDate,
 } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
@@ -53,22 +55,6 @@ function getTerminatorPoints(sunLat: number, sunLon: number, segments = 72): { l
   return points
 }
 
-/**
- * Compute ECEF unit vector pointing FROM the sun TOWARD earth center.
- * This is the DirectionalLight direction that darkens the night hemisphere.
- */
-function getSunLightDirection(sunLat: number, sunLon: number): Cartesian3 {
-  const latRad = (sunLat * Math.PI) / 180
-  const lonRad = (sunLon * Math.PI) / 180
-  // Sun position on unit sphere (ECEF)
-  // Light direction = negate (light travels FROM sun TO earth)
-  return new Cartesian3(
-    -Math.cos(latRad) * Math.cos(lonRad),
-    -Math.cos(latRad) * Math.sin(lonRad),
-    -Math.sin(latRad)
-  )
-}
-
 // Original fixed light used when Day/Night is OFF
 const FIXED_LIGHT_DIR = new Cartesian3(0.35, -0.9, -0.28)
 const FIXED_LIGHT_INTENSITY = 1.8
@@ -106,14 +92,31 @@ export function useTerminatorLayer() {
       intervalRef.current = null
     }
 
-    // Restore fixed light when disabled
     if (!isEnabled) {
+      // Restore fixed lighting — always daylit
       viewer.scene.light = new DirectionalLight({
         direction: FIXED_LIGHT_DIR,
         intensity: FIXED_LIGHT_INTENSITY,
       })
+      viewer.scene.globe.enableLighting = false
+      // Pin clock back to solar noon
+      const noon = new Date()
+      noon.setUTCHours(12, 0, 0, 0)
+      viewer.clock.currentTime = JulianDate.fromDate(noon)
+      viewer.clock.shouldAnimate = false
       return
     }
+
+    // ── Enable Day/Night ──────────────────────────────────────────────────
+    // SunLight: CesiumJS built-in light that follows the sun position
+    // based on viewer.clock.currentTime. This darkens 3D tiles on the
+    // night side automatically.
+    viewer.scene.light = new SunLight({ intensity: 2.0 })
+    viewer.scene.globe.enableLighting = true
+
+    // Set clock to real UTC time so SunLight computes correct position
+    viewer.clock.currentTime = JulianDate.fromDate(new Date())
+    viewer.clock.shouldAnimate = true
 
     const is2D = mapMode === '2d'
 
@@ -123,20 +126,11 @@ export function useTerminatorLayer() {
       const sun = getSunPosition(now)
       const terminatorPts = getTerminatorPoints(sun.lat, sun.lon)
 
-      // ── 3D MODE: Use DirectionalLight from real sun position ──────────
-      // This naturally darkens 3D tiles on the night hemisphere.
-      if (!is2D) {
-        viewer.scene.light = new DirectionalLight({
-          direction: getSunLightDirection(sun.lat, sun.lon),
-          intensity: 2.0,
-        })
-      } else {
-        // 2D: lighting doesn't affect the flat map, use Rectangle shadow
-        viewer.scene.light = new DirectionalLight({
-          direction: FIXED_LIGHT_DIR,
-          intensity: FIXED_LIGHT_INTENSITY,
-        })
+      // Keep clock in sync with real time
+      viewer.clock.currentTime = JulianDate.fromDate(now)
 
+      // 2D mode: add Rectangle shadow (SunLight doesn't affect flat map tiles)
+      if (is2D) {
         const nightWest = normalizeLon(sun.lon + 90)
         const nightEast = normalizeLon(sun.lon - 90)
         ds.entities.add({
@@ -152,68 +146,54 @@ export function useTerminatorLayer() {
         })
       }
 
-      // ── Terminator line (both modes) ──────────────────────────────────
+      // Terminator line (both modes)
       const linePositions = terminatorPts.map((p) =>
         Cartesian3.fromDegrees(p.lon, p.lat, 0)
       )
 
-      if (is2D) {
-        ds.entities.add({
-          id: 'terminator-line',
-          name: 'Day/Night Terminator',
-          polyline: {
-            positions: new ConstantProperty(linePositions),
-            width: new ConstantProperty(2.5),
-            material: Color.fromCssColorString('#f59e0b').withAlpha(0.8),
-          },
-        })
-        ds.entities.add({
-          id: 'terminator-glow',
-          name: 'Terminator Glow',
-          polyline: {
-            positions: new ConstantProperty(linePositions),
-            width: new ConstantProperty(10),
-            material: Color.fromCssColorString('#f59e0b').withAlpha(0.15),
-          },
-        })
-      } else {
-        ds.entities.add({
-          id: 'terminator-line',
-          name: 'Day/Night Terminator',
-          polyline: {
-            positions: new ConstantProperty(linePositions),
-            width: new ConstantProperty(2.5),
-            material: Color.fromCssColorString('#f59e0b').withAlpha(0.8),
-            clampToGround: new ConstantProperty(true),
-          },
-        })
-        ds.entities.add({
-          id: 'terminator-glow',
-          name: 'Terminator Glow',
-          polyline: {
-            positions: new ConstantProperty(linePositions),
-            width: new ConstantProperty(10),
-            material: Color.fromCssColorString('#f59e0b').withAlpha(0.15),
-            clampToGround: new ConstantProperty(true),
-          },
-        })
-      }
+      const clampTo3D = !is2D
+
+      ds.entities.add({
+        id: 'terminator-line',
+        name: 'Day/Night Terminator',
+        polyline: {
+          positions: new ConstantProperty(linePositions),
+          width: new ConstantProperty(2.5),
+          material: Color.fromCssColorString('#f59e0b').withAlpha(0.8),
+          ...(clampTo3D ? { clampToGround: new ConstantProperty(true) } : {}),
+        },
+      })
+      ds.entities.add({
+        id: 'terminator-glow',
+        name: 'Terminator Glow',
+        polyline: {
+          positions: new ConstantProperty(linePositions),
+          width: new ConstantProperty(10),
+          material: Color.fromCssColorString('#f59e0b').withAlpha(0.15),
+          ...(clampTo3D ? { clampToGround: new ConstantProperty(true) } : {}),
+        },
+      })
     }
 
     updateTerminator()
     intervalRef.current = setInterval(updateTerminator, 60000)
 
-    // Cleanup: restore fixed light on unmount
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
         intervalRef.current = null
       }
       if (viewer && !viewer.isDestroyed()) {
+        // Restore fixed lighting on cleanup
         viewer.scene.light = new DirectionalLight({
           direction: FIXED_LIGHT_DIR,
           intensity: FIXED_LIGHT_INTENSITY,
         })
+        viewer.scene.globe.enableLighting = false
+        const noon = new Date()
+        noon.setUTCHours(12, 0, 0, 0)
+        viewer.clock.currentTime = JulianDate.fromDate(noon)
+        viewer.clock.shouldAnimate = false
       }
     }
   }, [isEnabled, mapMode, viewerRef])
