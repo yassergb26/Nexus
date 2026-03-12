@@ -6,7 +6,7 @@ import {
   ConstantProperty,
   ColorMaterialProperty,
   Rectangle as CesiumRectangle,
-  Math as CesiumMath,
+  ClassificationType,
 } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
@@ -64,6 +64,7 @@ function getTerminatorPoints(sunLat: number, sunLon: number, segments = 72): { l
 export function useTerminatorLayer() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
   const isEnabled = useMapStore((s) => s.layers.find((l) => l.id === 'terminator')?.enabled ?? false)
+  const mapMode = useMapStore((s) => s.mapMode)
   const dataSourceRef = useRef<CustomDataSource | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -82,6 +83,7 @@ export function useTerminatorLayer() {
     }
   }, [viewerRef, viewerReady])
 
+  // Rebuild entities when enabled state or map mode changes
   useEffect(() => {
     const ds = dataSourceRef.current
     if (!ds) return
@@ -92,6 +94,8 @@ export function useTerminatorLayer() {
     }
     if (!isEnabled) return
 
+    const is2D = mapMode === '2d'
+
     const updateTerminator = () => {
       ds.entities.removeAll()
       const now = new Date()
@@ -99,49 +103,88 @@ export function useTerminatorLayer() {
       const terminatorPts = getTerminatorPoints(sun.lat, sun.lon)
 
       // Night shadow — Rectangle handles antimeridian wrapping natively.
-      // When west > east (in radians), CesiumJS wraps across the dateline.
       const nightWest = normalizeLon(sun.lon + 90)
       const nightEast = normalizeLon(sun.lon - 90)
-      ds.entities.add({
-        id: 'night-shadow',
-        name: 'Night Hemisphere',
-        rectangle: {
-          coordinates: new ConstantProperty(
-            CesiumRectangle.fromDegrees(nightWest, -90, nightEast, 90)
-          ),
-          material: new ColorMaterialProperty(Color.BLACK.withAlpha(0.35)),
-          height: new ConstantProperty(0),
-        },
-      })
 
-      // Terminator line — regular polyline at height 0 (clampToGround fails in 2D)
+      if (is2D) {
+        // 2D: render on globe surface with explicit height
+        ds.entities.add({
+          id: 'night-shadow',
+          name: 'Night Hemisphere',
+          rectangle: {
+            coordinates: new ConstantProperty(
+              CesiumRectangle.fromDegrees(nightWest, -90, nightEast, 90)
+            ),
+            material: new ColorMaterialProperty(Color.BLACK.withAlpha(0.35)),
+            height: new ConstantProperty(0),
+          },
+        })
+      } else {
+        // 3D: drape on Google Photorealistic 3D Tiles via classification
+        ds.entities.add({
+          id: 'night-shadow',
+          name: 'Night Hemisphere',
+          rectangle: {
+            coordinates: new ConstantProperty(
+              CesiumRectangle.fromDegrees(nightWest, -90, nightEast, 90)
+            ),
+            material: new ColorMaterialProperty(Color.BLACK.withAlpha(0.35)),
+            classificationType: new ConstantProperty(ClassificationType.CESIUM_3D_TILE),
+          },
+        })
+      }
+
+      // Terminator line
       const linePositions = terminatorPts.map((p) =>
         Cartesian3.fromDegrees(p.lon, p.lat, 0)
       )
-      ds.entities.add({
-        id: 'terminator-line',
-        name: 'Day/Night Terminator',
-        polyline: {
-          positions: new ConstantProperty(linePositions),
-          width: new ConstantProperty(2.5),
-          material: Color.fromCssColorString('#f59e0b').withAlpha(0.8),
-          arcType: new ConstantProperty(CesiumMath.RADIANS_PER_DEGREE ? 0 : 0),
-        },
-      })
 
-      // Wider glow line for visual emphasis
-      ds.entities.add({
-        id: 'terminator-glow',
-        name: 'Terminator Glow',
-        polyline: {
-          positions: new ConstantProperty(linePositions),
-          width: new ConstantProperty(10),
-          material: Color.fromCssColorString('#f59e0b').withAlpha(0.15),
-        },
-      })
+      if (is2D) {
+        // 2D: regular polylines at height 0
+        ds.entities.add({
+          id: 'terminator-line',
+          name: 'Day/Night Terminator',
+          polyline: {
+            positions: new ConstantProperty(linePositions),
+            width: new ConstantProperty(2.5),
+            material: Color.fromCssColorString('#f59e0b').withAlpha(0.8),
+          },
+        })
+        ds.entities.add({
+          id: 'terminator-glow',
+          name: 'Terminator Glow',
+          polyline: {
+            positions: new ConstantProperty(linePositions),
+            width: new ConstantProperty(10),
+            material: Color.fromCssColorString('#f59e0b').withAlpha(0.15),
+          },
+        })
+      } else {
+        // 3D: clampToGround so line drapes on 3D tiles
+        ds.entities.add({
+          id: 'terminator-line',
+          name: 'Day/Night Terminator',
+          polyline: {
+            positions: new ConstantProperty(linePositions),
+            width: new ConstantProperty(2.5),
+            material: Color.fromCssColorString('#f59e0b').withAlpha(0.8),
+            clampToGround: new ConstantProperty(true),
+          },
+        })
+        ds.entities.add({
+          id: 'terminator-glow',
+          name: 'Terminator Glow',
+          polyline: {
+            positions: new ConstantProperty(linePositions),
+            width: new ConstantProperty(10),
+            material: Color.fromCssColorString('#f59e0b').withAlpha(0.15),
+            clampToGround: new ConstantProperty(true),
+          },
+        })
+      }
     }
 
     updateTerminator()
     intervalRef.current = setInterval(updateTerminator, 60000)
-  }, [isEnabled])
+  }, [isEnabled, mapMode])
 }

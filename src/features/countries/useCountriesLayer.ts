@@ -1,15 +1,5 @@
 import { useEffect, useRef } from 'react'
-import {
-  GeoJsonDataSource,
-  Color,
-  ConstantProperty,
-  ColorMaterialProperty,
-  Cartesian3,
-  Cartographic,
-  LabelStyle,
-  VerticalOrigin,
-  NearFarScalar,
-} from 'cesium'
+import { GeoJsonDataSource, Color, ConstantProperty, ColorMaterialProperty } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
 
@@ -204,6 +194,23 @@ const COUNTRY_COLORS: Record<string, string> = {
   'Sri Lanka': '#78716c',
   'Bhutan': '#78716c',
 
+  // ── Balkans / Eastern Europe ──
+  'Serbia': '#78716c',
+  'Bosnia and Herz.': '#78716c',
+  'Kosovo': NATO_BLUE,
+  'Moldova': '#78716c',
+
+  // ── Pacific Islands ──
+  'Fiji': '#06b6d4',
+  'Papua New Guinea': '#06b6d4',
+  'Solomon Is.': '#06b6d4',
+  'Vanuatu': '#06b6d4',
+  'New Caledonia': FR_COLOR,
+
+  // ── Territories ──
+  'Falkland Is.': UK_COLOR,
+  'N. Cyprus': NATO_BLUE,
+
   // ── Other Americas ──
   'Ecuador': BRAZIL,
   'Bolivia': BRAZIL,
@@ -227,24 +234,6 @@ const COUNTRY_COLORS: Record<string, string> = {
 }
 
 const DEFAULT_COLOR = '#00d4aa'
-
-/** Compute a rough centroid from polygon vertex positions */
-function computeCentroid(positions: Cartesian3[]): Cartesian3 | null {
-  if (!positions || positions.length === 0) return null
-  let lonSum = 0
-  let latSum = 0
-  let count = 0
-  for (const p of positions) {
-    const c = Cartographic.fromCartesian(p)
-    if (c) {
-      lonSum += c.longitude
-      latSum += c.latitude
-      count++
-    }
-  }
-  if (count === 0) return null
-  return Cartesian3.fromRadians(lonSum / count, latSum / count, 0)
-}
 
 export function useCountriesLayer() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
@@ -274,8 +263,6 @@ export function useCountriesLayer() {
       if (viewer.isDestroyed()) return
 
       const entities = ds.entities.values
-      let polyCount = 0
-
       for (const entity of entities) {
         const name = entity.properties?.NAME?.getValue() ||
                      entity.properties?.ADMIN?.getValue() ||
@@ -288,32 +275,6 @@ export function useCountriesLayer() {
         if (entity.polygon) {
           entity.polygon.outlineColor = new ConstantProperty(Color.fromCssColorString(color))
           entity.polygon.material = new ColorMaterialProperty(Color.fromCssColorString(color).withAlpha(0.08))
-          polyCount++
-
-          // Add English label at polygon centroid
-          if (name) {
-            const hierarchy = entity.polygon.hierarchy?.getValue(viewer.clock.currentTime)
-            if (hierarchy && hierarchy.positions) {
-              const centroid = computeCentroid(hierarchy.positions)
-              if (centroid) {
-                ds.entities.add({
-                  position: centroid,
-                  label: {
-                    text: new ConstantProperty(name),
-                    font: new ConstantProperty('10px monospace'),
-                    fillColor: new ConstantProperty(Color.WHITE.withAlpha(0.85)),
-                    style: new ConstantProperty(LabelStyle.FILL_AND_OUTLINE),
-                    outlineColor: new ConstantProperty(Color.BLACK),
-                    outlineWidth: new ConstantProperty(2),
-                    verticalOrigin: new ConstantProperty(VerticalOrigin.CENTER),
-                    scaleByDistance: new ConstantProperty(new NearFarScalar(1.5e6, 1.0, 4e7, 0.4)),
-                    translucencyByDistance: new ConstantProperty(new NearFarScalar(5e6, 1.0, 5e7, 0.0)),
-                    disableDepthTestDistance: new ConstantProperty(Number.POSITIVE_INFINITY),
-                  },
-                })
-              }
-            }
-          }
         }
 
         // Set entity name for tooltip
@@ -322,7 +283,7 @@ export function useCountriesLayer() {
 
       viewer.dataSources.add(ds)
       dataSourceRef.current = ds
-      setLayerCount('countries', polyCount)
+      setLayerCount('countries', entities.length)
     }).catch((err) => {
       console.warn('Countries GeoJSON failed to load:', err.message)
     })
