@@ -206,12 +206,59 @@ const COUNTRY_COLORS: Record<string, string> = {
   'Solomon Is.': '#06b6d4',
   'Vanuatu': '#06b6d4',
   'New Caledonia': FR_COLOR,
+  'Samoa': '#06b6d4',
+  'Tonga': '#06b6d4',
+  'Kiribati': '#06b6d4',
+  'Micronesia': '#06b6d4',
+  'Marshall Is.': '#06b6d4',
+  'Palau': '#06b6d4',
+  'Nauru': '#06b6d4',
+  'Tuvalu': '#06b6d4',
+  'Niue': '#06b6d4',
+  'Cook Is.': '#06b6d4',
+  'American Samoa': WESTERN,
+  'Guam': WESTERN,
+  'N. Mariana Is.': WESTERN,
+  'Norfolk Island': WESTERN,
+  'Pitcairn Is.': UK_COLOR,
+  'Wallis and Futuna Is.': FR_COLOR,
+  'Fr. Polynesia': FR_COLOR,
+  'Ashmore and Cartier Is.': WESTERN,
 
   // ── Territories ──
   'Falkland Is.': UK_COLOR,
   'N. Cyprus': NATO_BLUE,
   'Fr. S. Antarctic Lands': FR_COLOR,
   'Antarctica': '#78716c',
+  'Br. Indian Ocean Ter.': UK_COLOR,
+  'Indian Ocean Ter.': WESTERN,
+  'Heard I. and McDonald Is.': WESTERN,
+  'S. Geo. and the Is.': UK_COLOR,
+  'Saint Helena': UK_COLOR,
+  'Bermuda': UK_COLOR,
+  'Cayman Is.': UK_COLOR,
+  'British Virgin Is.': UK_COLOR,
+  'Turks and Caicos Is.': UK_COLOR,
+  'Montserrat': UK_COLOR,
+  'Anguilla': UK_COLOR,
+  'U.S. Virgin Is.': WESTERN,
+  'Faeroe Is.': NATO_BLUE,
+  'St. Pierre and Miquelon': FR_COLOR,
+  'St-Barthélemy': FR_COLOR,
+  'St-Martin': FR_COLOR,
+  'Siachen Glacier': INDIA,
+
+  // ── Caribbean ──
+  'Barbados': BRAZIL,
+  'Dominica': BRAZIL,
+  'Grenada': BRAZIL,
+  'Saint Lucia': BRAZIL,
+  'St. Kitts and Nevis': BRAZIL,
+  'St. Vin. and Gren.': BRAZIL,
+  'Antigua and Barb.': BRAZIL,
+  'Aruba': BRAZIL,
+  'Curaçao': BRAZIL,
+  'Sint Maarten': BRAZIL,
 
   // ── Other Americas ──
   'Ecuador': BRAZIL,
@@ -233,6 +280,30 @@ const COUNTRY_COLORS: Record<string, string> = {
   'Trinidad and Tobago': BRAZIL,
   'Bahamas': BRAZIL,
   'Puerto Rico': WESTERN,
+
+  // ── Africa (island nations) ──
+  'Cabo Verde': '#14b8a6',
+  'Comoros': '#14b8a6',
+  'Mauritius': '#14b8a6',
+  'Seychelles': '#14b8a6',
+  'São Tomé and Principe': '#14b8a6',
+
+  // ── Europe (micro-states) ──
+  'Andorra': NATO_BLUE,
+  'Liechtenstein': NATO_BLUE,
+  'Malta': NATO_BLUE,
+  'Monaco': FR_COLOR,
+  'San Marino': NATO_BLUE,
+  'Vatican': NATO_BLUE,
+  'Guernsey': UK_COLOR,
+  'Jersey': UK_COLOR,
+  'Isle of Man': UK_COLOR,
+  'Åland': NATO_BLUE,
+
+  // ── Asia (additional) ──
+  'Hong Kong': CHINA_RED,
+  'Macao': CHINA_RED,
+  'Maldives': '#78716c',
 }
 
 /** Map abbreviated / non-English GeoJSON names → proper English names */
@@ -252,11 +323,32 @@ const ENGLISH_NAMES: Record<string, string> = {
   'Timor-Leste': 'East Timor',
   'eSwatini': 'Eswatini',
   'Czechia': 'Czech Republic',
-  'North Macedonia': 'North Macedonia',
-  'Brunei': 'Brunei',
-  'Somaliland': 'Somaliland',
-  'Laos': 'Laos',
-  'Myanmar': 'Myanmar',
+  'Cabo Verde': 'Cape Verde',
+  'São Tomé and Principe': 'Sao Tome and Principe',
+  'Curaçao': 'Curacao',
+  'St-Barthélemy': 'Saint Barthelemy',
+  'St-Martin': 'Saint Martin',
+  'Antigua and Barb.': 'Antigua and Barbuda',
+  'St. Kitts and Nevis': 'Saint Kitts and Nevis',
+  'St. Vin. and Gren.': 'Saint Vincent and the Grenadines',
+  'Marshall Is.': 'Marshall Islands',
+  'Cook Is.': 'Cook Islands',
+  'N. Mariana Is.': 'Northern Mariana Islands',
+  'Wallis and Futuna Is.': 'Wallis and Futuna',
+  'Fr. Polynesia': 'French Polynesia',
+  'Ashmore and Cartier Is.': 'Ashmore and Cartier Islands',
+  'Br. Indian Ocean Ter.': 'British Indian Ocean Territory',
+  'Indian Ocean Ter.': 'Australian Indian Ocean Territories',
+  'Heard I. and McDonald Is.': 'Heard Island and McDonald Islands',
+  'S. Geo. and the Is.': 'South Georgia and the South Sandwich Islands',
+  'Cayman Is.': 'Cayman Islands',
+  'British Virgin Is.': 'British Virgin Islands',
+  'Turks and Caicos Is.': 'Turks and Caicos Islands',
+  'U.S. Virgin Is.': 'US Virgin Islands',
+  'Faeroe Is.': 'Faroe Islands',
+  'St. Pierre and Miquelon': 'Saint Pierre and Miquelon',
+  'Pitcairn Is.': 'Pitcairn Islands',
+  'Åland': 'Aland Islands',
 }
 
 const DEFAULT_COLOR = '#00d4aa'
@@ -280,7 +372,7 @@ export function useCountriesLayer() {
       return
     }
 
-    GeoJsonDataSource.load('/data/countries.geojson', {
+    GeoJsonDataSource.load('/data/countries-50m.geojson', {
       stroke: Color.fromCssColorString(DEFAULT_COLOR),
       strokeWidth: 1.5,
       fill: Color.fromCssColorString(DEFAULT_COLOR).withAlpha(0.06),

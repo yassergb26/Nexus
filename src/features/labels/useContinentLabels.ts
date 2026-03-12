@@ -9,6 +9,7 @@ import {
   LabelStyle,
 } from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
+import { useMapStore } from '../../store/useMapStore'
 
 /** Continent label positions (geographic center) */
 const CONTINENTS = [
@@ -25,17 +26,26 @@ const LABEL_COLOR = Color.fromCssColorString('#a0a0a0')
 const OUTLINE_COLOR = Color.fromCssColorString('#0a0a0a')
 
 /**
- * Always-on continent labels in English.
+ * Continent labels in English — only visible in 2D map mode.
  * Replaces the mixed-language labels from CartoDB dark_all tiles.
- * Labels scale with zoom: large when zoomed out, fade when zoomed in.
  */
 export function useContinentLabels() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
+  const mapMode = useMapStore((s) => s.mapMode)
   const dataSourceRef = useRef<CustomDataSource | null>(null)
 
   useEffect(() => {
     const viewer = viewerRef.current
     if (!viewer || !viewerReady || viewer.isDestroyed()) return
+
+    // Only show continent labels in 2D mode
+    if (mapMode !== '2d') {
+      if (dataSourceRef.current) {
+        viewer.dataSources.remove(dataSourceRef.current, true)
+        dataSourceRef.current = null
+      }
+      return
+    }
 
     const ds = new CustomDataSource('continent-labels')
 
@@ -51,7 +61,6 @@ export function useContinentLabels() {
           outlineWidth: new ConstantProperty(3),
           style: new ConstantProperty(LabelStyle.FILL_AND_OUTLINE),
           verticalOrigin: new ConstantProperty(VerticalOrigin.CENTER),
-          // Visible when zoomed out, fades when zoomed in
           scaleByDistance: new ConstantProperty(
             new NearFarScalar(3e6, 1.0, 2e7, 0.6)
           ),
@@ -72,5 +81,5 @@ export function useContinentLabels() {
       }
       dataSourceRef.current = null
     }
-  }, [viewerRef, viewerReady])
+  }, [viewerRef, viewerReady, mapMode])
 }
