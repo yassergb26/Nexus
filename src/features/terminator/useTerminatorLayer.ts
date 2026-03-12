@@ -1,5 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { CustomDataSource, Cartesian3, Color, ConstantProperty, PolygonHierarchy, ColorMaterialProperty } from 'cesium'
+import {
+  CustomDataSource,
+  Cartesian3,
+  Color,
+  ConstantProperty,
+  ColorMaterialProperty,
+  Rectangle as CesiumRectangle,
+  Math as CesiumMath,
+} from 'cesium'
 import { useCesiumViewerContext } from '../../contexts/CesiumViewerContext'
 import { useMapStore } from '../../store/useMapStore'
 
@@ -53,55 +61,6 @@ function getTerminatorPoints(sunLat: number, sunLon: number, segments = 72): { l
   return points
 }
 
-/**
- * Build a polygon covering the night hemisphere, avoiding poles (±80°).
- * Uses the hour-angle formula to find terminator longitude at each latitude,
- * then traces the east edge up and west edge down with connectors via anti-solar.
- */
-function getNightPolygonPoints(sunLat: number, sunLon: number): Cartesian3[] {
-  const MAX_LAT = 78
-  const STEP = 4
-  const sunLatRad = (sunLat * Math.PI) / 180
-  const antiLon = normalizeLon(sunLon + 180)
-
-  const terminatorLonAt = (lat: number, east: boolean): number => {
-    const latRad = (lat * Math.PI) / 180
-    const cosH = -Math.tan(latRad) * Math.tan(sunLatRad)
-    if (cosH > 1) return antiLon
-    if (cosH < -1) return sunLon
-    const hourAngle = Math.acos(Math.max(-1, Math.min(1, cosH))) * 180 / Math.PI
-    return normalizeLon(sunLon + (east ? hourAngle : -hourAngle))
-  }
-
-  const points: Cartesian3[] = []
-
-  // East terminator edge (south → north)
-  for (let lat = -MAX_LAT; lat <= MAX_LAT; lat += STEP) {
-    points.push(Cartesian3.fromDegrees(terminatorLonAt(lat, true), lat))
-  }
-
-  // Top connector: east terminator → anti-solar → west terminator at +MAX_LAT
-  points.push(Cartesian3.fromDegrees(normalizeLon(antiLon - 60), MAX_LAT))
-  points.push(Cartesian3.fromDegrees(normalizeLon(antiLon - 30), MAX_LAT))
-  points.push(Cartesian3.fromDegrees(antiLon, MAX_LAT))
-  points.push(Cartesian3.fromDegrees(normalizeLon(antiLon + 30), MAX_LAT))
-  points.push(Cartesian3.fromDegrees(normalizeLon(antiLon + 60), MAX_LAT))
-
-  // West terminator edge (north → south)
-  for (let lat = MAX_LAT; lat >= -MAX_LAT; lat -= STEP) {
-    points.push(Cartesian3.fromDegrees(terminatorLonAt(lat, false), lat))
-  }
-
-  // Bottom connector: west terminator → anti-solar → east terminator at -MAX_LAT
-  points.push(Cartesian3.fromDegrees(normalizeLon(antiLon + 60), -MAX_LAT))
-  points.push(Cartesian3.fromDegrees(normalizeLon(antiLon + 30), -MAX_LAT))
-  points.push(Cartesian3.fromDegrees(antiLon, -MAX_LAT))
-  points.push(Cartesian3.fromDegrees(normalizeLon(antiLon - 30), -MAX_LAT))
-  points.push(Cartesian3.fromDegrees(normalizeLon(antiLon - 60), -MAX_LAT))
-
-  return points
-}
-
 export function useTerminatorLayer() {
   const { viewerRef, viewerReady } = useCesiumViewerContext()
   const isEnabled = useMapStore((s) => s.layers.find((l) => l.id === 'terminator')?.enabled ?? false)
@@ -139,30 +98,34 @@ export function useTerminatorLayer() {
       const sun = getSunPosition(now)
       const terminatorPts = getTerminatorPoints(sun.lat, sun.lon)
 
-      // Night shadow polygon — covers the dark hemisphere
-      const nightPoints = getNightPolygonPoints(sun.lat, sun.lon)
-      if (nightPoints.length > 3) {
-        ds.entities.add({
-          id: 'night-shadow',
-          name: 'Night Hemisphere',
-          polygon: {
-            hierarchy: new PolygonHierarchy(nightPoints),
-            material: new ColorMaterialProperty(Color.BLACK.withAlpha(0.35)),
-            height: 0,
-          },
-        })
-      }
+      // Night shadow — Rectangle handles antimeridian wrapping natively.
+      // When west > east (in radians), CesiumJS wraps across the dateline.
+      const nightWest = normalizeLon(sun.lon + 90)
+      const nightEast = normalizeLon(sun.lon - 90)
+      ds.entities.add({
+        id: 'night-shadow',
+        name: 'Night Hemisphere',
+        rectangle: {
+          coordinates: new ConstantProperty(
+            CesiumRectangle.fromDegrees(nightWest, -90, nightEast, 90)
+          ),
+          material: new ColorMaterialProperty(Color.BLACK.withAlpha(0.35)),
+          height: new ConstantProperty(0),
+        },
+      })
 
-      // Terminator line — clamped to ground for 2D/3D compatibility
-      const linePositions = terminatorPts.map((p) => Cartesian3.fromDegrees(p.lon, p.lat))
+      // Terminator line — regular polyline at height 0 (clampToGround fails in 2D)
+      const linePositions = terminatorPts.map((p) =>
+        Cartesian3.fromDegrees(p.lon, p.lat, 0)
+      )
       ds.entities.add({
         id: 'terminator-line',
         name: 'Day/Night Terminator',
         polyline: {
           positions: new ConstantProperty(linePositions),
-          width: new ConstantProperty(2),
-          material: Color.fromCssColorString('#f59e0b').withAlpha(0.7),
-          clampToGround: new ConstantProperty(true),
+          width: new ConstantProperty(2.5),
+          material: Color.fromCssColorString('#f59e0b').withAlpha(0.8),
+          arcType: new ConstantProperty(CesiumMath.RADIANS_PER_DEGREE ? 0 : 0),
         },
       })
 
@@ -172,9 +135,8 @@ export function useTerminatorLayer() {
         name: 'Terminator Glow',
         polyline: {
           positions: new ConstantProperty(linePositions),
-          width: new ConstantProperty(8),
-          material: Color.fromCssColorString('#f59e0b').withAlpha(0.12),
-          clampToGround: new ConstantProperty(true),
+          width: new ConstantProperty(10),
+          material: Color.fromCssColorString('#f59e0b').withAlpha(0.15),
         },
       })
     }

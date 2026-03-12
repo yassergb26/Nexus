@@ -48,6 +48,8 @@ const COUNTRY_LEGEND: LegendItem[] = [
   { color: '#ef4444', label: 'China / DPRK' },
   { color: '#a855f7', label: 'India' },
   { color: '#22c55e', label: 'Latin America' },
+  { color: '#14b8a6', label: 'Sub-Saharan Africa' },
+  { color: '#06b6d4', label: 'Southeast Asia' },
   { color: '#fbbf24', label: 'Ukraine' },
   { color: '#00d4aa', label: 'Other' },
 ]
